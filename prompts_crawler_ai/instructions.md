@@ -37,4 +37,4 @@ Siga estes passos **uma única vez** para preparar o ambiente.
 **1. Instale as dependências:**
 Abra um terminal nesta pasta e execute o seguinte comando para instalar todas as bibliotecas Python necessárias:
 ```bash
-pip install requests beautifulsoup4 lxml python-dotenv google-generativeai selenium undetected-chromedriver
+pip install requests beautifulsoup4 lxml python-dotenv google-generativeai selenium undetected-chromedriver fpdf2 WeasyPrint
