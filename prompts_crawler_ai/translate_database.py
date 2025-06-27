@@ -1,152 +1,122 @@
 import os
 import json
-import re
-import time
-import hashlib
+import asyncio
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-# --- CONFIGURAÇÕES GERAIS ---
-DATABASE_FILE = 'prompts_database_final.json'
-OUTPUT_DIR_FULL = 'HTML_Arsenal_Completo'
-INDEX_TEMPLATE_FILE = 'index_template.html'
-CONTENT_TEMPLATE_FILE = 'content_template.html'
-
-# --- CONTEÚDO DO PRODUTO ---
+# --- CONFIGURAÇÕES ---
+load_dotenv()
+INPUT_FILE = 'prompts_database_structured.json' 
+OUTPUT_FILE = 'prompts_database_final.json' 
+GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 PRODUCT_NAME = "Arsenal Dev AI"
-BRAND_NAME = "Brazilian Dev"
+OLD_BRAND_NAME = "Black Magic"
+CACHE_FILE = 'translation_cache_structured.json'
+CONCURRENCY_LIMIT = 5
+gemini_model = None
 
-def load_template(filename):
-    """Carrega um ficheiro de template."""
-    try:
-        with open(filename, 'r', encoding='utf-8') as f:
-            return f.read()
-    except FileNotFoundError:
-        print(f"ERRO FATAL: Ficheiro de template '{filename}' não encontrado.")
-        return None
+# --- META-PROMPT ATUALIZADO ---
+TRANSLATION_PROMPT_TEMPLATE = f"""
+Você é um especialista em localização de software. Sua tarefa é traduzir o conteúdo do seguinte objeto JSON para o Português do Brasil.
 
-def generate_html_file(html_content, output_filename):
-    """Salva conteúdo HTML num ficheiro."""
+**Diretrizes Críticas:**
+1.  **Traduza APENAS os valores de texto.** Não altere as chaves nem a estrutura do objeto.
+2.  **NÃO traduza o valor da chave "emoji".** Mantenha o emoji original que receber.
+3.  **Tom e Estilo:** Mantenha um tom profissional e acessível.
+4.  **Substituição de Marca:** Qualquer menção a '{OLD_BRAND_NAME}' ou 'Magia Negra' deve ser **obrigatoriamente substituída** por '{PRODUCT_NAME}'.
+5.  **Formato de Saída:** Sua resposta deve ser **APENAS** o objeto JSON completo com os valores traduzidos.
+
+**Objeto JSON para traduzir:**
+```json
+{{json_to_translate}}
+```
+"""
+
+def setup_gemini():
+    # ... (código da função inalterado)
+    global gemini_model
+    if not GOOGLE_API_KEY:
+        print("AVISO: GOOGLE_API_KEY não encontrada.")
+        return False
     try:
-        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
-        with open(output_filename, 'w', encoding='utf-8') as f:
-            f.write(html_content)
+        genai.configure(api_key=GOOGLE_API_KEY)
+        gemini_model = genai.GenerativeModel('gemini-1.5-pro-latest')
+        print("API do Gemini configurada com sucesso.")
+        return True
     except Exception as e:
-        print(f"!!! ERRO ao salvar o ficheiro '{output_filename}': {e}")
+        print(f"Erro ao configurar a API do Gemini: {e}")
+        return False
 
-def render_content_structure(structure):
-    """Renderiza a estrutura de conteúdo em HTML."""
-    content_html = ""
-    for block in structure:
-        block_type = block.get("type", "paragraph")
-        block_content = html.escape(block.get("content", ""))
-        if not block_content: continue
+def load_cache():
+    # ... (código da função inalterado)
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except json.JSONDecodeError: return {}
+    return {}
 
-        if block_type == "subheading":
-            anchor_id = re.sub(r'[^\w-]', '', block_content.lower().replace(' ', '-'))[:50]
-            content_html += f'<h3 id="{anchor_id}" class="content-subheading">{block_content}</h3>'
-        elif block_type == "paragraph":
-            content_html += f'<p class="content-paragraph">{block_content}</p>'
-        elif block_type == "prompt":
-            content_html += f'''
-                <div class="prompt-card">
-                    <div class="prompt-card-header"><h4>Prompt de Comando</h4><button class="copy-button">Copiar</button></div>
-                    <div class="prompt-card-body"><pre>{block_content}</pre></div>
-                </div>'''
-    return content_html
+def save_cache(cache):
+    # ... (código da função inalterado)
+    with open(CACHE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(cache, f, indent=4, ensure_ascii=False)
 
+async def translate_entry_task(semaphore, entry_to_translate):
+    # ... (código da função inalterado)
+    async with semaphore:
+        title = entry_to_translate.get('main_title', 'Sem Título')
+        print(f"Processando: '{title}'")
+        prompt = TRANSLATION_PROMPT_TEMPLATE.format(json_to_translate=json.dumps(entry_to_translate, indent=2, ensure_ascii=False))
+        try:
+            print(f"   -> Enviando para tradução: '{title}'")
+            response = await gemini_model.generate_content_async(prompt)
+            cleaned_response = response.text.strip().lstrip("```json").rstrip("```").strip()
+            translated_data = json.loads(cleaned_response)
+            print(f"   -> Tradução concluída: '{title}'")
+            return translated_data
+        except Exception as e:
+            print(f"      -> ERRO ao traduzir '{title}': {e}")
+            return entry_to_translate
 
-def generate_content_pages(data, template_html):
-    """Gera todas as páginas de conteúdo com o novo estilo escuro."""
-    print(f"\n--- Gerando {len(data)} Páginas de Conteúdo (Tema Escuro) ---")
-    
-    for entry in data:
-        category = entry.get('category', 'Geral')
-        title = entry.get('main_title', 'Guia Sem Título')
-        
-        # Gera o nome do ficheiro de forma consistente
-        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
-        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
-        filename = f"{s_title}_{url_hash}.html"
-        filepath = os.path.join(OUTPUT_DIR_FULL, filename)
-
-        # Renderiza o conteúdo principal
-        main_content_html = render_content_structure(entry.get("content_structure", []))
-        
-        # Substitui os placeholders no template
-        final_html = template_html.replace('{page_title}', f"{title} - {PRODUCT_NAME}")
-        final_html = final_html.replace('{main_title}', title)
-        final_html = final_html.replace('{main_content}', main_content_html)
-        final_html = final_html.replace('{year}', time.strftime("%Y"))
-        final_html = final_html.replace('{brand_name}', BRAND_NAME)
-        
-        generate_html_file(final_html, filepath)
-    
-    print("--- Geração das páginas de conteúdo concluída. ---")
-
-
-def generate_index_page(data, template_html):
-    """Gera a página principal 'index.html' com o novo layout de cards."""
-    print("\n--- Gerando Página de Índice Principal (Novo Layout) ---")
-    
-    guides_by_category = {}
-    for entry in data:
-        category = entry.get('category', 'Geral')
-        if category not in guides_by_category:
-            guides_by_category[category] = {
-                "guides": [],
-                "emoji": entry.get("emoji", "✨")
-            }
-        
-        title = entry.get('main_title', 'Guia Sem Título')
-        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
-        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
-        filename = f"{s_title}_{url_hash}.html"
-        guides_by_category[category]["guides"].append({"title": title, "url": filename})
-
-    guide_list_html = ""
-    for category, details in sorted(guides_by_category.items()):
-        guide_list_html += f'<div class="category-section">'
-        guide_list_html += f'<h2><span class="emoji">{details["emoji"]}</span> {category}</h2>'
-        guide_list_html += '<div class="guide-list">'
-        for guide in details["guides"]:
-            guide_list_html += f'<a href="{guide["url"]}" class="guide-card"><span>{guide["title"]}</span></a>'
-        guide_list_html += '</div></div>'
-    
-    search_index = []
-    for category, details in guides_by_category.items():
-        for guide in details["guides"]:
-            search_index.append({"title": guide["title"], "category": category, "url": guide["url"]})
-
-    search_index_json_string = json.dumps(search_index, ensure_ascii=False)
-    js_data_line = f"const searchIndex = {search_index_json_string};"
-
-    final_html = template_html.replace('{product_name}', PRODUCT_NAME)
-    final_html = final_html.replace('{guide_list}', guide_list_html)
-    final_html = final_html.replace('{year}', time.strftime("%Y"))
-    final_html = final_html.replace('{brand_name}', BRAND_NAME)
-    final_html = final_html.replace('// <!-- SEARCH_INDEX_PLACEHOLDER -->', js_data_line)
-
-    generate_html_file(final_html, os.path.join(OUTPUT_DIR_FULL, "index.html"))
-    print("--- Geração da Página de Índice Principal concluída. ---")
-
-def main():
-    index_template = load_template(INDEX_TEMPLATE_FILE)
-    content_template = load_template(CONTENT_TEMPLATE_FILE)
-    if not index_template or not content_template: return
-
+async def main():
+    # ... (código da função inalterado)
+    if not setup_gemini(): return
     try:
-        with open(DATABASE_FILE, 'r', encoding='utf-8') as f:
-            all_data = json.load(f)
+        with open(INPUT_FILE, 'r', encoding='utf-8') as f:
+            structured_data = json.load(f)
+        if not structured_data:
+            print(f"AVISO: O ficheiro de entrada '{INPUT_FILE}' está vazio.")
+            return
     except Exception as e:
-        print(f"ERRO ao ler a base de dados '{DATABASE_FILE}': {e}")
+        print(f"ERRO ao ler o ficheiro de entrada: {e}")
         return
 
-    # Gera a página de índice com o novo design
-    generate_index_page(all_data, index_template)
-    
-    # Gera as páginas de conteúdo individuais com o novo design
-    generate_content_pages(all_data, content_template)
-    
-    print("\n--- Geração de Produtos HTML Concluída ---")
+    translation_cache = load_cache()
+    final_translated_data = []
+    tasks = []
+    semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
 
-if __name__ == "__main__":
-    main()
+    print(f"\n--- Iniciando Tradução Estrutural Paralela (limite de {CONCURRENCY_LIMIT} tarefas) ---")
+
+    for entry in structured_data:
+        entry_hash = str(hash(json.dumps(entry, sort_keys=True)))
+        if entry_hash in translation_cache:
+            final_translated_data.append(translation_cache[entry_hash])
+        else:
+            tasks.append((entry_hash, translate_entry_task(semaphore, entry)))
+
+    if tasks:
+        print(f"Enviando {len(tasks)} novas entradas para tradução...")
+        task_results = await asyncio.gather(*[task for _, task in tasks])
+        for (entry_hash, _), result in zip(tasks, task_results):
+            final_translated_data.append(result)
+            translation_cache[entry_hash] = result
+        save_cache(translation_cache)
+
+    print(f"\nProcessamento concluído. A gravar {len(final_translated_data)} entradas totais em '{OUTPUT_FILE}'...")
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+        json.dump(final_translated_data, f, indent=4, ensure_ascii=False)
+    print(f"\nSUCESSO: {len(final_translated_data)} entradas traduzidas e salvas em '{OUTPUT_FILE}'.")
+
+if __name__ == '__main__':
+    asyncio.run(main())
