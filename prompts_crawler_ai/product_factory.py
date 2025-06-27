@@ -1,312 +1,144 @@
 import os
 import json
 import re
-import sys
 import time
+import hashlib
 import html
 
 # --- CONFIGURAÇÕES GERAIS ---
-DATABASE_FILE = 'prompts_database_final_PT-BR.json'
+DATABASE_FILE = 'prompts_database_final.json'
 OUTPUT_DIR_FULL = 'HTML_Arsenal_Completo'
-OUTPUT_DIR_SAMPLE = 'HTML_Amostra_Gratis'
+INDEX_TEMPLATE_FILE = 'index_template.html'
+CONTENT_TEMPLATE_FILE = 'content_template.html'
+
+# --- CONTEÚDO DO PRODUTO ---
 PRODUCT_NAME = "Arsenal Dev AI"
 BRAND_NAME = "Brazilian Dev"
-ASSETS_DIR = 'assets'
-WEBSITE_URL = "https://arsenaldev.ai"
 
-# --- CONTEÚDO ---
-DICAS_DE_MESTRE = [
-    "Dica de Mestre: Ao usar um prompt, seja o mais específico possível. Em vez de 'crie um texto', diga 'crie um texto de 3 parágrafos em tom persuasivo sobre...'.",
-    "Dica de Mestre: A IA é ótima para gerar a primeira versão. Sempre revise e peça a ela mesma para 'agir como um editor sênior e refinar este texto'.",
-    "Dica de Mestre: Use a técnica de 'poucos exemplos' (few-shot). Dê à IA 2 ou 3 exemplos do estilo que você quer antes de fazer seu pedido final."
-]
-PROMOTIONAL_PROMPTS = [
-    {"category": "Marketing de Conteúdo", "prompt": "Crie 5 ideias de títulos para um vídeo no YouTube sobre [tópico]. Os títulos devem ser curtos, magnéticos e otimizados para cliques."},
-    {"category": "Copywriting (Escrita Persuasiva)", "prompt": "Aja como um copywriter sênior. Escreva um parágrafo persuasivo para um anúncio no Instagram vendendo um [tipo de produto, ex: curso online]. Use a fórmula AIDA."},
-    {"category": "Desenvolvimento de Software", "prompt": "Escreva uma função em Python que recebe uma lista de números e retorna apenas os números pares. Adicione comentários explicando o código."}
-]
-SOCIAL_LINKS = {
-    'Instagram': 'https://www.instagram.com/braziliandev_oficial/',
-    'TikTok': 'https://www.tiktok.com/@braziliandev_oficial',
-    'YouTube': 'https://www.youtube.com/braziliandev'
-}
-
-# --- TEMPLATE HTML E CSS ---
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{title}</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Fira+Code&display=swap');
-        html {{
-            scroll-behavior: smooth;
-        }}
-        body {{
-            font-family: 'Inter', sans-serif;
-            background-color: #111827;
-            color: #F9FAFB;
-            margin: 0;
-            padding: 40px;
-            line-height: 1.7;
-        }}
-        .container {{
-            max-width: 900px;
-            margin: auto;
-        }}
-        .header {{
-            text-align: center;
-            border-bottom: 1px solid #374151;
-            padding-bottom: 30px;
-            margin-bottom: 50px;
-        }}
-        .header img {{
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 3px solid #3B82F6;
-        }}
-        .header h1 {{
-            font-size: 42px;
-            font-weight: 900;
-            margin: 20px 0 5px 0;
-            color: #fff;
-        }}
-        .header h2 {{
-            font-size: 22px;
-            font-style: italic;
-            color: #9CA3AF;
-            font-weight: normal;
-        }}
-        .toc {{
-            background-color: #1F2937;
-            padding: 20px 30px;
-            border-radius: 8px;
-            margin-bottom: 50px;
-        }}
-        .toc h3 {{
-            font-size: 24px;
-            font-weight: 700;
-            margin-top: 0;
-            margin-bottom: 20px;
-        }}
-        .toc ul {{
-            list-style-type: none;
-            padding-left: 0;
-            column-count: 2;
-        }}
-        .toc a {{
-            text-decoration: none;
-            color: #60A5FA;
-            font-size: 16px;
-        }}
-        .toc a:hover {{ text-decoration: underline; }}
-        .toc li {{ margin-bottom: 10px; }}
-        .prompt-group h3 {{
-            font-size: 28px;
-            font-weight: 700;
-            border-left: 4px solid #3B82F6;
-            padding-left: 15px;
-            margin-top: 60px;
-        }}
-        .prompt-card {{
-            background-color: #1F2937;
-            border: 1px solid #374151;
-            border-radius: 8px;
-            margin: 25px 0;
-            position: relative;
-            overflow: hidden;
-        }}
-        .prompt-card-header {{
-             padding: 15px 20px;
-             border-bottom: 1px solid #374151;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-        }}
-        .prompt-card-header h4 {{
-            font-size: 16px;
-            margin: 0;
-            color: #E5E7EB;
-        }}
-        .prompt-card-body {{
-            padding: 20px;
-        }}
-        .prompt-card pre {{
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            font-family: 'Fira Code', monospace;
-            background-color: #111827;
-            padding: 15px;
-            border-radius: 5px;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #d1d5db;
-        }}
-        .copy-button {{
-            background-color: #374151;
-            color: #E5E7EB;
-            border: none;
-            padding: 5px 10px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 12px;
-            font-family: 'Inter', sans-serif;
-            transition: background-color 0.2s, color 0.2s;
-        }}
-        .copy-button:hover {{ background-color: #4B5563; }}
-        footer {{
-            text-align: center;
-            margin-top: 60px;
-            padding-top: 20px;
-            border-top: 1px solid #374151;
-            font-size: 14px;
-            color: #9CA3AF;
-        }}
-        .cta-section {{
-            text-align: center;
-            padding: 50px 20px;
-            margin-top: 60px;
-            background-color: #1F2937;
-            border-radius: 8px;
-        }}
-        .cta-button {{
-            display: inline-block;
-            background-color: #3B82F6;
-            color: #fff;
-            padding: 15px 30px;
-            font-size: 18px;
-            font-weight: bold;
-            text-decoration: none;
-            border-radius: 5px;
-            margin-top: 20px;
-        }}
-    </style>
-</head>
-<body>
-    <div class="container">
-        {content}
-    </div>
-    <script>
-        document.querySelectorAll('.copy-button').forEach(button => {{
-            button.addEventListener('click', () => {{
-                const pre = button.closest('.prompt-card').querySelector('pre');
-                navigator.clipboard.writeText(pre.innerText).then(() => {{
-                    button.innerText = 'Copiado!';
-                    button.style.backgroundColor = '#10B981';
-                    button.style.color = '#fff';
-                    setTimeout(() => {{
-                        button.innerText = 'Copiar';
-                        button.style.backgroundColor = '#374151';
-                        button.style.color = '#E5E7EB';
-                    }}, 2000);
-                }}, (err) => {{
-                    console.error('Erro ao copiar: ', err);
-                    button.innerText = 'Erro';
-                }});
-            }});
-        }});
-    </script>
-</body>
-</html>
-"""
+def load_template(filename):
+    """Carrega um ficheiro de template."""
+    try:
+        with open(filename, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        print(f"ERRO FATAL: Ficheiro de template '{filename}' não encontrado.")
+        return None
 
 def generate_html_file(html_content, output_filename):
-    """Salva o conteúdo HTML em um arquivo .html."""
+    """Salva conteúdo HTML num ficheiro."""
     try:
-        print(f"Gerando arquivo: '{output_filename}'...")
+        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
         with open(output_filename, 'w', encoding='utf-8') as f:
             f.write(html_content)
-        print(f" -> SUCESSO: '{output_filename}' gerado.")
     except Exception as e:
-        print(f"!!! ERRO ao salvar arquivo HTML: {e}")
+        print(f"!!! ERRO ao salvar o ficheiro '{output_filename}': {e}")
 
-def generate_full_packages(data):
-    """Gera as páginas HTML completas para cada categoria de produto."""
-    if not os.path.exists(OUTPUT_DIR_FULL): os.makedirs(OUTPUT_DIR_FULL)
+def render_content_structure(structure):
+    """Renderiza a estrutura de conteúdo em HTML."""
+    content_html = ""
+    for block in structure:
+        block_type = block.get("type", "paragraph")
+        block_content = html.escape(block.get("content", ""))
+        if not block_content: continue
+
+        if block_type == "subheading":
+            anchor_id = re.sub(r'[^\w-]', '', block_content.lower().replace(' ', '-'))[:50]
+            content_html += f'<h3 id="{anchor_id}" class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{block_content}</h3>'
+        elif block_type == "paragraph":
+            content_html += f'<p class="text-gray-300 text-lg mb-4">{block_content}</p>'
+        elif block_type == "prompt":
+            content_html += f'''
+                <div class="bg-gray-800 rounded-xl border border-gray-700 my-6">
+                    <div class="px-6 py-4 border-b border-gray-700 text-gray-300 font-semibold flex justify-between items-center">
+                        <span>Prompt de Comando</span>
+                        <button class="copy-button bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-lg text-sm transition-all">Copiar</button>
+                    </div>
+                    <div class="p-6">
+                        <pre class="whitespace-pre-wrap font-mono text-gray-200"><code>{block_content}</code></pre>
+                    </div>
+                </div>'''
+    return content_html
+
+def generate_content_pages(data, template_html):
+    """Gera todas as páginas de conteúdo com o novo estilo escuro."""
+    print(f"\n--- Gerando {len(data)} Páginas de Conteúdo (Tema Escuro) ---")
     
-    prompts_by_category = {}
+    for entry in data:
+        title = entry.get('main_title', 'Guia Sem Título')
+        
+        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
+        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
+        filename = f"{s_title}_{url_hash}.html"
+        filepath = os.path.join(OUTPUT_DIR_FULL, filename)
+
+        main_content_html = render_content_structure(entry.get("content_structure", []))
+        
+        processed_html = template_html.replace('{page_title}', f"{title} - {PRODUCT_NAME}")
+        processed_html = processed_html.replace('{main_title}', title)
+        processed_html = processed_html.replace('{main_content}', main_content_html)
+        processed_html = processed_html.replace('{year}', time.strftime("%Y"))
+        processed_html = processed_html.replace('{brand_name}', BRAND_NAME)
+        
+        generate_html_file(processed_html, filepath)
+    
+    print("--- Geração das páginas de conteúdo concluída. ---")
+
+def generate_index_page(data, template_html):
+    """Gera a página principal 'index.html' com o novo layout de cards."""
+    print("\n--- Gerando Página de Índice Principal (Novo Layout) ---")
+    
+    guides_by_category = {}
     for entry in data:
         category = entry.get('category', 'Geral')
-        if category not in prompts_by_category: prompts_by_category[category] = []
-        prompts_by_category[category].append(entry)
-
-    print(f"\n--- Iniciando Geração de {len(prompts_by_category)} Produtos HTML Completos ---")
-    for category, entries in prompts_by_category.items():
-        content_html = ""
-        sanitized_category_name = re.sub(r'[^\w\s-]', '', category).strip().replace(" ", "_")
-        filename = os.path.join(OUTPUT_DIR_FULL, f"Arsenal_Dev_{sanitized_category_name}.html")
+        if category not in guides_by_category:
+            guides_by_category[category] = {"guides": [], "emoji": entry.get("emoji", "✨")}
         
-        logo_path = os.path.join(ASSETS_DIR, 'nova_logo.jpg')
-        logo_html = f'<img src="file:///{os.path.abspath(logo_path)}">' if os.path.exists(logo_path) else ''
-        content_html += f'<div class="header">{logo_html}<h1>{PRODUCT_NAME}</h1><h2>Guia de Prompts: {category}</h2></div>'
-        
-        content_html += '<div class="toc">'
-        content_html += '<h3>Índice</h3><ul>'
-        for i, entry in enumerate(entries):
-            anchor_id = f"entry-{i}"
-            content_html += f'<li><a href="#{anchor_id}">{html.escape(entry["title"])}</a></li>'
-        content_html += '</ul></div>'
+        title = entry.get('main_title', 'Guia Sem Título')
+        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
+        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
+        filename = f"{s_title}_{url_hash}.html"
+        guides_by_category[category]["guides"].append({"title": title, "url": filename})
 
-        for i, entry in enumerate(entries):
-            anchor_id = f"entry-{i}"
-            content_html += f'<div class="prompt-group" id="{anchor_id}"><h3>{html.escape(entry["title"])}</h3>'
-            
-            # CORREÇÃO DEFINITIVA: Lendo da chave "translated_prompts"
-            prompts = entry.get("translated_prompts", [])
-            if not prompts:
-                content_html += "<p><i>(Nenhum prompt encontrado para esta seção. Verifique o arquivo JSON de entrada.)</i></p>"
-            else:
-                for j, prompt_text in enumerate(prompts, 1):
-                    safe_prompt_text = html.escape(prompt_text)
-                    content_html += f'<div class="prompt-card"><div class="prompt-card-header"><h4>Prompt {j}</h4><button class="copy-button">Copiar</button></div><div class="prompt-card-body"><pre>{safe_prompt_text}</pre></div></div>'
-            content_html += '</div>'
-        
-        content_html += f'<footer><p>© {time.strftime("%Y")} {BRAND_NAME}. Todos os direitos reservados.</p></footer>'
-        final_html = HTML_TEMPLATE.format(title=f"{PRODUCT_NAME} - {category}", content=content_html)
-        
-        generate_html_file(final_html, filename)
+    guide_list_html = ""
+    for category, details in sorted(guides_by_category.items()):
+        guide_list_html += f'<div class="category-section mb-12">'
+        guide_list_html += f'<h2 class="text-3xl font-bold mb-6 flex items-center gap-4"><span class="text-4xl">{details["emoji"]}</span> {category}</h2>'
+        guide_list_html += '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">'
+        for guide in details["guides"]:
+            guide_list_html += f'<a href="{guide["url"]}" class="guide-card block bg-gray-800 p-6 rounded-xl border border-gray-700 hover:border-blue-500 hover:bg-gray-700 transition-all duration-200 transform hover:-translate-y-1"><span>{guide["title"]}</span></a>'
+        guide_list_html += '</div></div>'
+    
+    search_index = []
+    for category, details in guides_by_category.items():
+        for guide in details["guides"]:
+            content = " ".join([d.get("content", "") for d in data if d.get("main_title") == guide["title"]])
+            search_index.append({"title": guide["title"], "category": category, "url": guide["url"], "content": content})
 
-def generate_free_sample_html():
-    """Gera a página HTML completa para a amostra grátis."""
-    if not os.path.exists(OUTPUT_DIR_SAMPLE): os.makedirs(OUTPUT_DIR_SAMPLE)
-    
-    filename = os.path.join(OUTPUT_DIR_SAMPLE, "Amostra_Gratis_Arsenal_Dev_AI.html")
-    content_html = ""
+    js_data_line = f"const searchIndex = {json.dumps(search_index, ensure_ascii=False)};"
 
-    logo_path = os.path.join(ASSETS_DIR, 'nova_logo.jpg')
-    logo_html = f'<img src="file:///{os.path.abspath(logo_path)}">' if os.path.exists(logo_path) else ''
-    content_html += f'<div class="header">{logo_html}<h1>{PRODUCT_NAME}</h1><h2>Amostra Grátis de Prompts de Elite</h2></div>'
-    content_html += "<p style='text-align:center; color: #9CA3AF; max-width: 600px; margin: auto; margin-bottom: 40px;'>Uma pequena demonstração do poder que você terá em mãos com o Arsenal Dev AI completo.</p>"
-    
-    for item in PROMOTIONAL_PROMPTS:
-        safe_prompt_text = html.escape(item["prompt"])
-        content_html += f'<div class="prompt-group"><h3>Categoria: {item["category"]}</h3>'
-        content_html += f'<div class="prompt-card"><div class="prompt-card-header"><h4>Exemplo de Prompt</h4><button class="copy-button">Copiar</button></div><div class="prompt-card-body"><pre>{safe_prompt_text}</pre></div></div>'
-    
-    content_html += '<div class="cta-section">'
-    content_html += '<h3>Gostou? Desbloqueie o Arsenal Completo.</h3>'
-    content_html += '<p>Esta amostra é apenas o começo. Centenas de prompts avançados te esperam.</p>'
-    content_html += f'<a href="{WEBSITE_URL}" class="cta-button">ADQUIRA O ARSENAL DEV AI AGORA!</a>'
-    content_html += '</div>'
-    
-    content_html += f'<footer><p>© {time.strftime("%Y")} {BRAND_NAME}. Todos os direitos reservados.</p></footer>'
-    final_html = HTML_TEMPLATE.format(title="Amostra Grátis - Arsenal Dev AI", content=content_html)
-    
-    generate_html_file(final_html, filename)
+    final_html = template_html.replace('{product_name}', PRODUCT_NAME)
+    final_html = final_html.replace('{guide_list}', guide_list_html)
+    final_html = final_html.replace('{year}', time.strftime("%Y"))
+    final_html = final_html.replace('{brand_name}', BRAND_NAME)
+    final_html = final_html.replace('// SEARCH_INDEX_PLACEHOLDER', js_data_line)
+
+    generate_html_file(final_html, os.path.join(OUTPUT_DIR_FULL, "index.html"))
+    print("--- Geração da Página de Índice Principal concluída. ---")
 
 def main():
-    if not os.path.exists(DATABASE_FILE):
-        print(f"ERRO: Arquivo de banco de dados '{DATABASE_FILE}' não encontrado.")
-        return
-    
-    with open(DATABASE_FILE, 'r', encoding='utf-8') as f:
-        all_data = json.load(f)
+    index_template = load_template(INDEX_TEMPLATE_FILE)
+    content_template = load_template(CONTENT_TEMPLATE_FILE)
+    if not index_template or not content_template: return
 
-    generate_full_packages(all_data)
-    generate_free_sample_html()
+    try:
+        with open(DATABASE_FILE, 'r', encoding='utf-8') as f:
+            all_data = json.load(f)
+    except Exception as e:
+        print(f"ERRO ao ler a base de dados '{DATABASE_FILE}': {e}")
+        return
+
+    generate_index_page(all_data, index_template)
+    generate_content_pages(all_data, content_template)
     
     print("\n--- Geração de Produtos HTML Concluída ---")
 

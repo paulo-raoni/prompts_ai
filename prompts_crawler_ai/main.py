@@ -1,59 +1,65 @@
-import os
 import subprocess
 import sys
+import time
 
 # --- CONFIGURAÇÃO DO PIPELINE ---
-# Esta é a ordem de execução final e definitiva do nosso projeto.
 PIPELINE_SCRIPTS = [
     'crawler.py',
-    'consolidate_data.py',
+    'structure_data_with_vision.py',
     'translate_database.py',
-    'pdf_factory.py'
+    'product_factory.py'
 ]
 
-def run_script(script_name):
+def run_script(script_name, is_demo_mode):
     """
-    Função aprimorada para executar um script Python, mostrando sua saída em tempo real.
-    Retorna True em caso de sucesso, False em caso de falha.
+    Executa um script Python, passando o modo de execução (demo ou completo).
     """
-    print(f"\n{'='*25}\n EXECUTANDO: {script_name}\n{'='*25}")
+    mode_text = '(Modo DEMO)' if is_demo_mode else '(Modo COMPLETO)'
+    print(f"\n{'='*25}\n-> EXECUTANDO: {script_name} {mode_text}\n{'='*25}")
     try:
-        # Modificado: removemos a captura de output.
-        # A saída do script filho será mostrada diretamente no seu terminal.
-        # Isso resolve os problemas de encoding e melhora o feedback.
+        # Constrói o comando a ser executado
+        command = [sys.executable, script_name]
+        # Adiciona o argumento --demo se estiver no modo de demonstração
+        if is_demo_mode:
+            command.append('--demo')
+
         subprocess.run(
-            [sys.executable, script_name], # sys.executable garante que estamos usando o mesmo interpretador Python
-            check=True, # Garante que um erro no script irá lançar uma exceção
-            encoding='utf-8' # Ajuda a padronizar a codificação entre os processos
+            command,
+            check=True, # Garante que um erro no script irá parar o pipeline
+            encoding='utf-8'
         )
         print(f"--- SUCESSO: '{script_name}' concluído sem erros. ---")
         return True
-    except FileNotFoundError:
-        print(f"!!! ERRO FATAL: O script '{script_name}' não foi encontrado.")
-        print("!!! Verifique se o nome do arquivo está correto e no mesmo diretório.")
-        return False
-    except subprocess.CalledProcessError as e:
-        # Se o script retornar um código de erro (ou seja, quebrar), esta exceção é lançada.
-        print(f"!!! ERRO FATAL ao executar '{script_name}' !!!")
+    except Exception as e:
+        print(f"!!! ERRO FATAL ao executar '{script_name}': {e} !!!")
         print("!!! O pipeline foi interrompido.")
-        # stderr não é mais capturado diretamente, mas o erro do processo filho será exibido
         return False
 
 def main():
     """
-    Orquestra a execução de todo o pipeline de geração de PDFs.
+    Orquestra a execução de todo o pipeline.
+    Execute com 'python main.py --demo' para um teste rápido com 20 páginas.
+    Execute com 'python main.py' para o processo completo.
     """
-    print(">>> INICIANDO O PIPELINE DE GERAÇÃO 'ARSENAL DEV AI' <<<")
+    # Verifica se o modo demo foi ativado através dos argumentos da linha de comando
+    is_demo_mode = '--demo' in sys.argv
+
+    if is_demo_mode:
+        print(">>> INICIANDO O PIPELINE EM MODO DEMO (LIMITE DE 20 PÁGINAS) <<<")
+    else:
+        print(">>> INICIANDO O PIPELINE COMPLETO <<<")
     
-    # Executa cada script na ordem definida.
-    # Se qualquer um deles falhar, o orquestrador para.
+    start_time = time.time()
+
+    # Executa cada script na ordem, passando o modo de execução
     for script in PIPELINE_SCRIPTS:
-        if not run_script(script):
-            print("\n>>> O PIPELINE FOI INTERROMPIDO DEVIDO A UM ERRO. <<<")
+        if not run_script(script, is_demo_mode):
             break
-    else: # Este 'else' pertence ao 'for'. Ele só executa se o loop terminar SEM um 'break'.
-        print("\n\n>>> PIPELINE COMPLETO EXECUTADO COM SUCESSO! <<<")
-        print("Verifique as pastas 'PDF_Arsenal_Completo' e 'PDF_Amostra_Gratis' pelos seus arquivos.")
+    else: # Este 'else' pertence ao 'for'
+        end_time = time.time()
+        total_time = end_time - start_time
+        print("\n\n>>> PIPELINE EXECUTADO COM SUCESSO! <<<")
+        print(f"Tempo total de execução: {total_time:.2f} segundos.")
 
 if __name__ == '__main__':
     main()

@@ -1,84 +1,152 @@
 import os
 import json
-import sys
+import re
 import time
-from dotenv import load_dotenv
-import google.generativeai as genai
+import hashlib
 
-# --- CONFIGURAÇÕES ---
-load_dotenv()
-INPUT_FILE = 'prompts_database.json'
-OUTPUT_FILE = 'prompts_database_final_PT-BR.json'
-GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
+# --- CONFIGURAÇÕES GERAIS ---
+DATABASE_FILE = 'prompts_database_final.json'
+OUTPUT_DIR_FULL = 'HTML_Arsenal_Completo'
+INDEX_TEMPLATE_FILE = 'index_template.html'
+CONTENT_TEMPLATE_FILE = 'content_template.html'
 
-gemini_model = None
-translation_cache = {}
+# --- CONTEÚDO DO PRODUTO ---
+PRODUCT_NAME = "Arsenal Dev AI"
+BRAND_NAME = "Brazilian Dev"
 
-def setup_gemini():
-    """Configura o modelo Gemini para tradução."""
-    global gemini_model
-    if not GOOGLE_API_KEY:
-        print("AVISO: GOOGLE_API_KEY não encontrada no .env. A tradução não será executada.")
-        return False
+def load_template(filename):
+    """Carrega um ficheiro de template."""
     try:
-        genai.configure(api_key=GOOGLE_API_KEY)
-        gemini_model = genai.GenerativeModel('gemini-1.5-flash')
-        print("API do Gemini configurada com sucesso.")
-        return True
-    except Exception as e:
-        print(f"Erro ao configurar a API do Gemini: {e}")
-        return False
+        with open(filename, 'r', encoding='utf-8') as f:
+            return f.read()
+    except FileNotFoundError:
+        print(f"ERRO FATAL: Ficheiro de template '{filename}' não encontrado.")
+        return None
 
-def translate_text(text_to_translate):
-    """Traduz um texto para português, usando cache para evitar chamadas repetidas."""
-    if not gemini_model or not text_to_translate:
-        return text_to_translate
-    if text_to_translate in translation_cache:
-        return translation_cache[text_to_translate]
+def generate_html_file(html_content, output_filename):
+    """Salva conteúdo HTML num ficheiro."""
+    try:
+        os.makedirs(os.path.dirname(output_filename), exist_ok=True)
+        with open(output_filename, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+    except Exception as e:
+        print(f"!!! ERRO ao salvar o ficheiro '{output_filename}': {e}")
+
+def render_content_structure(structure):
+    """Renderiza a estrutura de conteúdo em HTML."""
+    content_html = ""
+    for block in structure:
+        block_type = block.get("type", "paragraph")
+        block_content = html.escape(block.get("content", ""))
+        if not block_content: continue
+
+        if block_type == "subheading":
+            anchor_id = re.sub(r'[^\w-]', '', block_content.lower().replace(' ', '-'))[:50]
+            content_html += f'<h3 id="{anchor_id}" class="content-subheading">{block_content}</h3>'
+        elif block_type == "paragraph":
+            content_html += f'<p class="content-paragraph">{block_content}</p>'
+        elif block_type == "prompt":
+            content_html += f'''
+                <div class="prompt-card">
+                    <div class="prompt-card-header"><h4>Prompt de Comando</h4><button class="copy-button">Copiar</button></div>
+                    <div class="prompt-card-body"><pre>{block_content}</pre></div>
+                </div>'''
+    return content_html
+
+
+def generate_content_pages(data, template_html):
+    """Gera todas as páginas de conteúdo com o novo estilo escuro."""
+    print(f"\n--- Gerando {len(data)} Páginas de Conteúdo (Tema Escuro) ---")
     
-    print(f"   -> Traduzindo: '{text_to_translate[:60]}...'")
-    try:
-        # Prompt otimizado para a tarefa
-        prompt = f"Traduza o seguinte texto do inglês para o Português do Brasil. Mantenha a formatação original, incluindo quebras de linha, e não traduza termos técnicos entre colchetes como [placeholder]. O texto a ser traduzido é: '{text_to_translate}'"
-        response = gemini_model.generate_content(prompt)
-        translated = response.text.strip()
-        translation_cache[text_to_translate] = translated
-        time.sleep(1)  # Pausa para respeitar os limites da API
-        return translated
-    except Exception as e:
-        print(f"   -> Falha na tradução: {e}")
-        return f"FALHA_NA_TRADUCAO: {text_to_translate}"
+    for entry in data:
+        category = entry.get('category', 'Geral')
+        title = entry.get('main_title', 'Guia Sem Título')
+        
+        # Gera o nome do ficheiro de forma consistente
+        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
+        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
+        filename = f"{s_title}_{url_hash}.html"
+        filepath = os.path.join(OUTPUT_DIR_FULL, filename)
+
+        # Renderiza o conteúdo principal
+        main_content_html = render_content_structure(entry.get("content_structure", []))
+        
+        # Substitui os placeholders no template
+        final_html = template_html.replace('{page_title}', f"{title} - {PRODUCT_NAME}")
+        final_html = final_html.replace('{main_title}', title)
+        final_html = final_html.replace('{main_content}', main_content_html)
+        final_html = final_html.replace('{year}', time.strftime("%Y"))
+        final_html = final_html.replace('{brand_name}', BRAND_NAME)
+        
+        generate_html_file(final_html, filepath)
+    
+    print("--- Geração das páginas de conteúdo concluída. ---")
+
+
+def generate_index_page(data, template_html):
+    """Gera a página principal 'index.html' com o novo layout de cards."""
+    print("\n--- Gerando Página de Índice Principal (Novo Layout) ---")
+    
+    guides_by_category = {}
+    for entry in data:
+        category = entry.get('category', 'Geral')
+        if category not in guides_by_category:
+            guides_by_category[category] = {
+                "guides": [],
+                "emoji": entry.get("emoji", "✨")
+            }
+        
+        title = entry.get('main_title', 'Guia Sem Título')
+        s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
+        url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
+        filename = f"{s_title}_{url_hash}.html"
+        guides_by_category[category]["guides"].append({"title": title, "url": filename})
+
+    guide_list_html = ""
+    for category, details in sorted(guides_by_category.items()):
+        guide_list_html += f'<div class="category-section">'
+        guide_list_html += f'<h2><span class="emoji">{details["emoji"]}</span> {category}</h2>'
+        guide_list_html += '<div class="guide-list">'
+        for guide in details["guides"]:
+            guide_list_html += f'<a href="{guide["url"]}" class="guide-card"><span>{guide["title"]}</span></a>'
+        guide_list_html += '</div></div>'
+    
+    search_index = []
+    for category, details in guides_by_category.items():
+        for guide in details["guides"]:
+            search_index.append({"title": guide["title"], "category": category, "url": guide["url"]})
+
+    search_index_json_string = json.dumps(search_index, ensure_ascii=False)
+    js_data_line = f"const searchIndex = {search_index_json_string};"
+
+    final_html = template_html.replace('{product_name}', PRODUCT_NAME)
+    final_html = final_html.replace('{guide_list}', guide_list_html)
+    final_html = final_html.replace('{year}', time.strftime("%Y"))
+    final_html = final_html.replace('{brand_name}', BRAND_NAME)
+    final_html = final_html.replace('// <!-- SEARCH_INDEX_PLACEHOLDER -->', js_data_line)
+
+    generate_html_file(final_html, os.path.join(OUTPUT_DIR_FULL, "index.html"))
+    print("--- Geração da Página de Índice Principal concluída. ---")
 
 def main():
-    if not setup_gemini():
-        sys.exit("Encerrando script. API do Gemini não pôde ser configurada.")
+    index_template = load_template(INDEX_TEMPLATE_FILE)
+    content_template = load_template(CONTENT_TEMPLATE_FILE)
+    if not index_template or not content_template: return
 
     try:
-        with open(INPUT_FILE, 'r', encoding='utf-8') as f:
-            data_to_translate = json.load(f)
-    except FileNotFoundError:
-        print(f"ERRO: Arquivo de entrada '{INPUT_FILE}' não encontrado. Execute 'consolidate_data.py' primeiro.")
+        with open(DATABASE_FILE, 'r', encoding='utf-8') as f:
+            all_data = json.load(f)
+    except Exception as e:
+        print(f"ERRO ao ler a base de dados '{DATABASE_FILE}': {e}")
         return
+
+    # Gera a página de índice com o novo design
+    generate_index_page(all_data, index_template)
     
-    translated_data = []
-    print(f"\n--- Iniciando Tradução Completa de {len(data_to_translate)} entradas ---")
+    # Gera as páginas de conteúdo individuais com o novo design
+    generate_content_pages(all_data, content_template)
+    
+    print("\n--- Geração de Produtos HTML Concluída ---")
 
-    for i, entry in enumerate(data_to_translate):
-        print(f"Processando entrada {i+1}/{len(data_to_translate)}: '{entry['title']}'")
-        
-        # Cria um novo dicionário com todos os campos traduzidos
-        new_entry = {
-            "category": translate_text(entry['category']),
-            "title": translate_text(entry['title']),
-            "translated_prompts": [translate_text(p) for p in entry['original_prompts']],
-            "source_url": entry['source_url']
-        }
-        translated_data.append(new_entry)
-        
-    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
-        json.dump(translated_data, f, indent=4, ensure_ascii=False)
-
-    print(f"\nSUCESSO: Base de dados 100% traduzida e salva em '{OUTPUT_FILE}'.")
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
