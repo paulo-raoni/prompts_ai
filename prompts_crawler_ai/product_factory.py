@@ -24,50 +24,44 @@ PRODUCT_NAME = "Arsenal Dev AI"
 BRAND_NAME = "Brazilian Dev"
 gemini_model = None
 
-# PROMPT PARA GERAR EXPLICAÇÃO DO ZERO
+# --- PROMPTS DE IA ---
+
+# PROMPT PARA GERAR DO ZERO (V5 - FOCO EM SIMPLICIDADE)
 VIDEO_WRITER_PROMPT_TEMPLATE = """
-Você é um Estratega de Conteúdo e Redator Técnico Sênior. Sua especialidade é destilar a lógica e o potencial de um prompt de IA em uma explicação clara, concisa e estratégica.
+Você é um excelente professor, especialista em explicar conceitos de tecnologia de forma muito simples e direta.
 
 **SUA TAREFA:**
-Analisando o contexto de uma página (título e exemplos de prompt), sua missão é escrever um texto curto e fluido que explique O MÉTODO ou A ESTRATÉGIA por trás do(s) prompt(s) apresentados. O objetivo é ajudar o usuário a entender *como* e *por que* o prompt funciona, para que ele possa adaptá-lo para qualquer LLM de sua preferência.
+Sua missão é criar um texto curto (2 parágrafos, no máximo) que explique para que serve o método ou prompt apresentado no contexto. O objetivo é que qualquer pessoa, mesmo sem experiência, entenda o que o prompt faz e como pode usá-lo.
 
-**REGRAS CRÍTICAS DE ESCRITA:**
-
-1.  **Foco na Estratégia, Não nos Passos:** Em vez de um "passo a passo", explique o conceito. Por exemplo, em vez de "1. Abra o ChatGPT, 2. Copie o prompt...", escreva sobre a "técnica de usar a IA para gerar ideias de forma massiva e depois aplicá-las em um design..." num parágrafo.
-
-2.  **Texto Fluido em Parágrafos:** A saída deve ser um texto corrido, dividido em 2 ou 3 parágrafos. **NUNCA** use listas numeradas (1, 2, 3...) ou com marcadores (*, -). O texto deve ser conciso e direto.
-
-3.  **Seja Genérico e Abstrato:** NÃO mencione nomes de ferramentas ou softwares específicos (como Canva, TikTok, ChatGPT, Gemini, etc.), a menos que façam parte do texto do prompt original. A explicação deve ser aplicável a qualquer ferramenta de IA ou rede social. Use termos genéricos como "a ferramenta de IA", "a plataforma de vídeo", "sua rede social".
-
-4.  **Tom de Especialista:** Mantenha um tom didático e de especialista, explicando o "pulo do gato" ou a principal vantagem do método.
-
-5.  **Saída Limpa:** Gere APENAS o texto da explicação, sem introduções como "Claro, aqui está o texto:".
-
-6.  **Idioma (MUITO IMPORTANTE):** O texto final deve ser escrito em Português do Brasil.
-
-7.  **Substituição de Marca (OBRIGATÓRIO):** Se o contexto mencionar "Black Magic" ou "AI Avalanche", substitua estes nomes por "Arsenal Dev AI" ou "Brazilian Dev", de forma apropriada. Esta regra é inegociável.
+**REGRAS CRÍTICAS:**
+1.  **Simplicidade Absoluta:** Use uma linguagem extremamente clara e direta. Evite jargões técnicos. Imagine que está a escrever para alguém que está a começar agora no mundo da IA. O objetivo é que a pessoa leia e diga "Ah, entendi! É só isso?".
+2.  **Foco no "O Quê" e "Porquê":** Explique o que o prompt faz e qual o benefício de o usar.
+3.  **Texto Fluido e Curto:** A saída deve ser um texto corrido. NUNCA use listas numeradas ou com marcadores.
+4.  **Seja Genérico:** Não mencione nomes de ferramentas (Canva, TikTok, etc.), a menos que seja essencial para o contexto do prompt.
+5.  **Substituição de Marca (OBRIGATÓRIO):** "Black Magic" ou "AI Avalanche" devem se tornar "Arsenal Dev AI" ou "Brazilian Dev".
+6.  **Saída Limpa:** Gere apenas o texto da explicação, sem títulos ou introduções.
 
 **CONTEXTO DA PÁGINA:**
 {page_context}
 
-**EXPLIQUE AGORA O MÉTODO POR TRÁS DO(S) PROMPT(S) USANDO TODAS AS REGRAS ACIMA:**
+**EXPLIQUE AGORA O MÉTODO DE FORMA MUITO SIMPLES:**
 """
 
-# NOVO PROMPT PARA APENAS MELHORAR UM TEXTO EXISTENTE
+# PROMPT PARA APENAS MELHORAR (V2 - FOCO EM SIMPLICIDADE)
 ENHANCE_METHOD_PROMPT = """
-Você é um Editor e Estratega de Conteúdo Sênior, com um olhar apurado para clareza e profundidade.
+Você é um Redator Técnico e Editor, especialista em adaptar tutoriais de uma plataforma para outra.
 
 **SUA TAREFA:**
-Você receberá um texto que já explica um método para usar um prompt de IA. Sua missão é analisar este texto e o contexto da página. Baseado nisso, siga estritamente a seguinte lógica:
+Sua missão é **traduzir e adaptar** o texto do tutorial abaixo para a nossa plataforma, "Arsenal Dev AI". O objetivo é que o tutorial permaneça prático e funcional para o nosso utilizador.
 
-1.  **Se o texto existente já for bom, claro e completo,** simplesmente retorne o texto original, sem adicionar ou remover absolutamente nada.
-2.  **Se o texto puder ser significativamente melhorado (por ser muito curto, vago ou confuso),** reescreva-o de forma mais clara e estratégica, mantendo a ideia central.
+**LÓGICA DE EXECUÇÃO OBRIGATÓRIA:**
 
-**REGRAS CRÍTICAS PARA QUANDO REESCREVER:**
-- O texto final deve ser fluido, em 2 ou 3 parágrafos. NUNCA use listas.
-- Seja genérico e não mencione nomes de ferramentas (Canva, etc.).
-- Aplique a substituição de marca obrigatória: "Black Magic" ou "AI Avalanche" devem se tornar "Arsenal Dev AI" ou "Brazilian Dev".
-- Retorne apenas o texto final (o original ou o reescrito), sem nenhuma introdução.
+1.  **Traduza e Adapte:** Traduza todo o texto para um Português do Brasil claro e natural.
+2.  **Preservação de Informação Crítica:** **MANTENHA** todos os passos práticos, links (ex: `www.make.com`), e menções a ferramentas essenciais (ex: `ChatGPT API key`). Esta informação é vital e não deve ser removida ou generalizada. O utilizador precisa dela para seguir o tutorial.
+3.  **Substituição de Marca:** Substitua menções a marcas concorrentes ("Black Magic", "AI Avalanche") pela nossa marca ("Arsenal Dev AI" ou "Brazilian Dev").
+4.  **Clareza:** Se o texto original for confuso, melhore a redação para torná-lo mais claro, mas **sem remover os passos essenciais**.
+5.  **Formato:** Mantenha o texto em parágrafos. Não adicione listas se não existirem no original.
+6.  **Saída Limpa:** Retorne apenas o texto final do tutorial, sem introduções.
 
 **TEXTO ORIGINAL PARA ANÁLISE:**
 {existing_explanation}
@@ -75,12 +69,11 @@ Você receberá um texto que já explica um método para usar um prompt de IA. S
 **CONTEXTO ADICIONAL DA PÁGINA (TÍTULO E PROMPTS):**
 {page_context}
 
-**AGORA, RETORNE O TEXTO FINAL (ORIGINAL OU APRIMORADO):**
+**AGORA, TRADUZA E ADAPTE O TUTORIAL SEGUINDO TODAS AS REGRAS:**
 """
 
+# --- FUNÇÕES AUXILIARES ---
 
-# --- Funções Auxiliares (load_template, generate_html_file, etc.) ---
-# (O conteúdo destas funções permanece o mesmo da versão anterior)
 def load_template(filename):
     try:
         with open(filename, 'r', encoding='utf-8') as f: return f.read()
@@ -123,10 +116,9 @@ def save_video_cache(cache):
     with open(VIDEO_CONTENT_CACHE_FILE, 'w', encoding='utf-8') as f: json.dump(cache, f, indent=4, ensure_ascii=False)
 
 
-# --- Lógica de Geração (com as novas funções) ---
-# (O conteúdo das funções de reestruturação e geração de páginas permanece o mesmo)
+# --- LÓGICA DE GERAÇÃO (ESTRUTURA PRINCIPAL) ---
+
 def restructure_and_group_data(data):
-    # ... (código inalterado da versão anterior)
     print("-> Reestruturando dados e identificando subcategorias...")
     sections = {}
     for entry in data:
@@ -160,7 +152,6 @@ def restructure_and_group_data(data):
     return sections
 
 def create_search_index(grouped_data):
-    # ... (código inalterado da versão anterior)
     search_index = []
     for section_name, sub_categories in grouped_data.items():
         for sub_category_name, details in sub_categories.items():
@@ -175,16 +166,16 @@ def create_search_index(grouped_data):
                 })
     return search_index
 
+
+# --- FUNÇÕES DE PROCESSAMENTO ASSÍNCRONO DE IA ---
+
 async def generate_video_content_task(semaphore, cache_key, prompt_template, context_data):
-    """
-    Tarefa assíncrona que formata o prompt correto (gerar ou aprimorar) e chama a API.
-    """
+    """Tarefa assíncrona que formata o prompt correto (gerar ou aprimorar) e chama a API."""
     async with semaphore:
         prompt_title = "A aprimorar texto" if 'existing_explanation' in context_data else "A gerar texto do zero"
         print(f"   -> [API] {prompt_title} para a página: {context_data['page_context'][:60]}...")
         
         try:
-            # O .format(**context_data) irá preencher {page_context} e, se existir, {existing_explanation}
             prompt = prompt_template.format(**context_data)
             response = await gemini_model.generate_content_async(prompt)
             return (cache_key, response.text)
@@ -193,10 +184,7 @@ async def generate_video_content_task(semaphore, cache_key, prompt_template, con
             return (cache_key, None)
 
 async def pre_generate_all_video_content(grouped_data, video_cache):
-    """
-    Identifica o conteúdo de vídeo necessário, decide se deve gerar ou aprimorar,
-    e executa as tarefas em paralelo.
-    """
+    """Identifica o conteúdo de vídeo necessário, decide se deve gerar ou aprimorar, e executa as tarefas em paralelo."""
     if not gemini_model:
         print("AVISO: O modelo Gemini não está configurado. A geração de conteúdo de vídeo será pulada.")
         return
@@ -210,39 +198,29 @@ async def pre_generate_all_video_content(grouped_data, video_cache):
             for prompt_data in details["prompts"]:
                 content_structure = prompt_data.get("content_structure", [])
                 
-                # Procura por uma menção a "vídeo" para decidir se a página precisa de atenção
                 if any("vídeo" in block.get("content", "").lower() for block in content_structure):
                     
                     page_context = f"Título: {prompt_data['title']}\nSubcategoria: {sub_category_name}\nConteúdo:\n" + "\n".join([f"- {b['type']}: {b['content']}" for b in content_structure])
                     cache_key = hashlib.md5(page_context.encode()).hexdigest()
 
-                    # Continua apenas se o resultado ainda não estiver no cache
                     if cache_key not in video_cache:
                         
-                        # AQUI ESTÁ A LÓGICA DE DECISÃO:
-                        # 1. Extrai parágrafos que JÁ EXISTEM e que NÃO são o placeholder do vídeo.
                         existing_paragraphs = [
                             block['content'] for block in content_structure 
                             if block.get('type') == 'paragraph' and 'vídeo' not in block.get('content', '').lower()
                         ]
-                        
-                        # 2. Junta os parágrafos existentes num único texto.
                         existing_explanation = "\n\n".join(existing_paragraphs).strip()
 
-                        # 3. Decide qual prompt usar.
                         if not existing_explanation:
-                            # CENÁRIO B: Não há texto, apenas vídeo. Gerar do zero.
                             prompt_to_use = VIDEO_WRITER_PROMPT_TEMPLATE
                             context_for_prompt = {"page_context": page_context}
                         else:
-                            # CENÁRIO C: Já existe um texto. Aprimorar.
                             prompt_to_use = ENHANCE_METHOD_PROMPT
                             context_for_prompt = {
                                 "page_context": page_context,
                                 "existing_explanation": existing_explanation
                             }
 
-                        # 4. Cria a tarefa com o prompt e o contexto corretos.
                         task = generate_video_content_task(semaphore, cache_key, prompt_to_use, context_for_prompt)
                         tasks.append(task)
 
@@ -261,9 +239,51 @@ async def pre_generate_all_video_content(grouped_data, video_cache):
     
     print(f"--- Pré-geração concluída. {updated_count} novos itens foram adicionados ao cache. ---")
 
-# --- FUNÇÃO ATUALIZADA ---
-def render_content_structure(structure, titles_to_ignore, page_context_for_video, video_cache):
-    """Renderiza a estrutura, buscando o conteúdo de vídeo do cache pré-populado."""
+
+# --- FUNÇÕES DE RENDERIZAÇÃO DE HTML (NOVA ARQUITETURA) ---
+
+def consolidate_method_explanation(original_structure, page_context, video_cache):
+    """Recebe a estrutura original e devolve uma nova, limpa, com a explicação do método gerada pela IA e sem duplicados."""
+    is_video_case = any("vídeo" in block.get("content", "").lower() for block in original_structure)
+    if not is_video_case:
+        return original_structure
+
+    cache_key = hashlib.md5(page_context.encode()).hexdigest()
+    generated_text = video_cache.get(cache_key)
+
+    if not generated_text:
+        return [block for block in original_structure if "vídeo" not in block.get("content", "").lower()]
+
+    ai_explanation_block = {"type": "ai_explanation", "content": generated_text}
+    
+    clean_structure = []
+    method_section_started = False
+    
+    for block in original_structure:
+        block_content_lower = block.get("content", "").lower()
+        block_type = block.get("type")
+
+        if block_type == "subheading" and "método" in block_content_lower:
+            method_section_started = True
+            clean_structure.append(block)
+            clean_structure.append(ai_explanation_block)
+            continue
+        
+        if method_section_started and block_type == "subheading":
+            method_section_started = False
+            
+        if method_section_started and block_type == "paragraph":
+            continue
+
+        if "vídeo" in block_content_lower:
+            continue
+            
+        clean_structure.append(block)
+
+    return clean_structure
+
+def render_content_structure(structure, titles_to_ignore):
+    """Renderiza uma estrutura de conteúdo JÁ LIMPA, sem lógicas complexas."""
     content_html = ""
     prompt_count = sum(1 for block in structure if block.get("type") == "prompt")
 
@@ -273,35 +293,28 @@ def render_content_structure(structure, titles_to_ignore, page_context_for_video
         
         if block_content.strip() in titles_to_ignore:
             continue
-        
-        if "vídeo" in block_content.lower():
-            cache_key = hashlib.md5(page_context_for_video.encode()).hexdigest()
-            if cache_key in video_cache:
-                generated_text = video_cache[cache_key]
-                # Corrigido para evitar o SyntaxError com backslash
-                formatted_text_for_html = generated_text.replace("\n", "<br>")
-                
-                content_html += f'''
-                <div class="bg-gray-900/50 backdrop-blur-sm border border-blue-500/50 p-6 my-6 rounded-xl">
-                    <h4 class="text-xl font-bold text-blue-300 mb-2">Passo a Passo do Método</h4>
-                    <div class="text-gray-300 space-y-4">{formatted_text_for_html}</div>
-                </div>
-                '''
-            else:
-                print(f"      -> AVISO: Conteúdo para vídeo com chave '{cache_key[:8]}' não foi encontrado no cache. Pulando.")
+            
+        safe_block_content = html.escape(block_content) if block_type not in ['paragraph', 'ai_explanation'] else block.get("content", "")
+        if not safe_block_content:
             continue
-
-        safe_block_content = html.escape(block_content) if block_type != 'paragraph' else block.get("content", "")
-        if not safe_block_content: continue
-
-        if block_type == "subheading":
+        
+        if block_type == "ai_explanation":
+            formatted_text_for_html = block_content.replace("\n", "<br>")
+            content_html += f'''
+            <div class="bg-gray-900/50 p-6 my-6">
+                <div class="text-gray-300 space-y-4">{formatted_text_for_html}</div>
+            </div>
+            '''
+        elif block_type == "subheading":
             if "comandos" in block_content.lower() or "prompts" in block_content.lower():
-                 heading_text = "O Comando" if prompt_count == 1 else "Os Comandos"
-                 content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{heading_text}</h3>'
+                heading_text = "O Comando" if prompt_count == 1 else "Os Comandos"
+                content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{heading_text}</h3>'
             else:
-                 content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{safe_block_content}</h3>'
+                content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{safe_block_content}</h3>'
+        
         elif block_type == "paragraph":
             content_html += f'<p class="text-gray-300 text-lg mb-4">{safe_block_content}</p>'
+        
         elif block_type == "prompt":
             content_html += f'''
                 <div class="bg-gray-800 rounded-xl border border-gray-700 my-6">
@@ -311,6 +324,7 @@ def render_content_structure(structure, titles_to_ignore, page_context_for_video
                     </div>
                     <div class="p-6"><pre class="whitespace-pre-wrap font-mono text-gray-200"><code>{html.escape(block_content)}</code></pre></div>
                 </div>'''
+                
     return content_html
 
 def generate_content_pages(grouped_data, template_html, video_cache):
@@ -321,15 +335,16 @@ def generate_content_pages(grouped_data, template_html, video_cache):
         for sub_category_name, details in sub_categories.items():
             for prompt in details["prompts"]:
                 count += 1
-                content_structure = prompt["content_structure"]
-                titles_to_ignore = {prompt['title'], sub_category_name}
-
-                # Cria o contexto completo da página para enviar à IA do vídeo
+                
                 page_context_for_video = f"Título: {prompt['title']}\n"
                 page_context_for_video += f"Subcategoria: {sub_category_name}\n"
-                page_context_for_video += "Conteúdo:\n" + "\n".join([f"- {b['type']}: {b['content']}" for b in content_structure])
+                page_context_for_video += "Conteúdo:\n" + "\n".join([f"- {b['type']}: {b['content']}" for b in prompt["content_structure"]])
 
-                main_content_html = render_content_structure(content_structure, titles_to_ignore, page_context_for_video, video_cache)
+                original_content_structure = prompt["content_structure"]
+                clean_content_structure = consolidate_method_explanation(original_content_structure, page_context_for_video, video_cache)
+
+                titles_to_ignore = {prompt['title'], sub_category_name}
+                main_content_html = render_content_structure(clean_content_structure, titles_to_ignore)
                 
                 main_title_clean = prompt['title']
                 
@@ -346,7 +361,6 @@ def generate_content_pages(grouped_data, template_html, video_cache):
     print(f"--- {count} páginas de conteúdo geradas. ---")
 
 def generate_section_pages(grouped_data, template_html, search_index):
-    # ... (código inalterado da versão anterior)
     print("\n--- Gerando Páginas de Índice de Seção (Cards Agrupados) ---")
     count = 0
     for section_name, sub_categories in grouped_data.items():
@@ -381,7 +395,6 @@ def generate_section_pages(grouped_data, template_html, search_index):
     print(f"--- {count} páginas de seção geradas. ---")
 
 def generate_index_page(grouped_data, template_html, search_index):
-    # ... (código inalterado da versão anterior)
     print("\n--- Gerando Página de Índice Principal (Layout Detalhado) ---")
     index_html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">'
     for section_name, sub_categories in sorted(grouped_data.items()):
@@ -409,6 +422,9 @@ def generate_index_page(grouped_data, template_html, search_index):
     final_html = final_html.replace('// SEARCH_INDEX_PLACEHOLDER', js_data_line)
     generate_html_file(final_html, os.path.join(OUTPUT_DIR_FULL, "index.html"))
     print("--- Geração da Página de Índice Principal concluída. ---")
+
+
+# --- FUNÇÃO DE ARRANQUE ---
 
 async def main():
     if not setup_gemini():
