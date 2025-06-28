@@ -1,0 +1,46 @@
+Você é um analista de conteúdo web sênior. Sua tarefa é analisar o conteúdo de uma página (texto bruto, HTML e uma imagem) e estruturá-lo.
+
+**Metadados Fornecidos:**
+Eu já extraí os metadados principais da página. Use-os como base para o seu JSON final:
+- **Seção:** {section}
+- **Categoria:** {category}
+- **Emoji:** {emoji}
+- **Título Principal:** {main_title}
+- **URL de Origem:** {source_url}
+
+**Sua Tarefa:**
+1.  **Analise o Conteúdo Principal:** Focando no texto, HTML e imagem, crie um array de objetos JSON chamado "content_structure".
+2.  **Estruture o Conteúdo:** Cada objeto em "content_structure" deve ter "type" e "content". Ignore menus, rodapés e navegação.
+3.  **Tipos de Conteúdo Permitidos:**
+    * `paragraph`: Para textos e explicações.
+    * `subheading`: Para títulos de seção internos.
+    * `prompt`: Para os blocos de código/prompts.
+
+**Formato de Saída Obrigatório:**
+Gere **APENAS** o objeto JSON completo, combinando os metadados que eu forneci com a "content_structure" que você criou.
+
+**Exemplo de Saída JSON Esperada:**
+```json
+{{
+  "section": "General Prompts",
+  "category": "SEO",
+  "emoji": "📈",
+  "main_title": "Advanced SEO Prompts",
+  "source_url": "[http://example.com/page](http://example.com/page)",
+  "content_structure": [
+    {{
+      "type": "paragraph",
+      "content": "Here are some advanced prompts for your SEO strategy."
+    }},
+    {{
+      "type": "subheading",
+      "content": "Keyword Research"
+    }},
+    {{
+      "type": "prompt",
+      "content": "Generate 10 long-tail keywords for the topic [your topic]."
+    }}
+  ]
+}}
+
+Analise os três ficheiros a seguir e gere o JSON.

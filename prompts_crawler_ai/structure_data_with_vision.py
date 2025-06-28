@@ -2,61 +2,35 @@ import os
 import json
 import asyncio
 import sys
+import re
 from dotenv import load_dotenv
 import google.generativeai as genai
 from PIL import Image
 
 # --- CONFIGURAÇÕES ---
 load_dotenv()
-INPUT_DIR = 'BlackMagic_Prompts_Raw' 
+INPUT_DIR = 'Arsenal_Dev_AI_Raw' 
 OUTPUT_FILE = 'prompts_database_structured.json'
+# --- O NOME DO NOSSO NOVO ARQUIVO DE TEMPLATE ---
+PROMPT_TEMPLATE_FILE = 'structure_prompt_template.txt'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 CONCURRENCY_LIMIT = 5
-DEMO_PROCESSING_LIMIT = 20 # Limite para o modo demo
+DEMO_PROCESSING_LIMIT = 20
 
 gemini_model = None
+# --- A VARIÁVEL DO PROMPT SERÁ CARREGADA DO ARQUIVO ---
+prompt_template_content = ""
 
-# --- META-PROMPT PARA ESTRUTURAÇÃO COM VISÃO E HTML ---
-META_PROMPT_FOR_STRUCTURING = """
-Você é um analista de conteúdo web sênior. Sua tarefa é analisar um conjunto de três ficheiros de uma página web (uma imagem, o seu texto bruto, e o seu código-fonte HTML) para criar um JSON estruturado que represente a ordem e a hierarquia do conteúdo.
-
-**Diretrizes:**
-1.  **Analise as Três Fontes:**
-    * **Imagem (`.png`):** Use para entender o layout visual, a importância e a ordem dos elementos.
-    * **Código HTML (`.html`):** Use como a principal fonte de verdade para a estrutura semântica (tags `<h1>`, `<h2>`, `<p>`, `<code>`).
-    * **Texto Bruto (`.txt`):** Use como referência para o conteúdo textual a ser incluído.
-2.  **Estruture a Saída:** Crie um array de objetos JSON chamado "content_structure". Cada objeto deve ter duas chaves: "type" e "content". Ignore qualquer texto que seja claramente parte da navegação do site (menus, rodapés, barras laterais). Foque-se no conteúdo principal.
-3.  **Refine a Categoria:** A categoria original extraída pelo crawler é uma sugestão. Baseado na sua análise completa do conteúdo, refine esta categoria para ser mais específica e descritiva. Por exemplo, se a categoria original for "Advanced_Prompts" e o conteúdo for sobre SEO, a categoria refinada deve ser "Prompts Avançados para SEO".
-4.  **Tipos de Conteúdo Permitidos:**
-    * `paragraph`: Para textos introdutórios, explicações ou notas.
-    * `subheading`: Para títulos de seção dentro da página.
-    * `prompt`: Para os blocos de código ou os prompts em si.
-
-**Exemplo de Saída JSON Esperada:**
-```json
-{
-  "category": "Prompts Avançados para SEO",
-  "main_title": "Advanced SEO Prompts",
-  "source_url": "[http://example.com/page](http://example.com/page)",
-  "content_structure": [
-    {
-      "type": "paragraph",
-      "content": "Here are some advanced prompts to help you with your SEO strategy."
-    },
-    {
-      "type": "subheading",
-      "content": "Keyword Research"
-    },
-    {
-      "type": "prompt",
-      "content": "Generate 10 long-tail keywords for the topic [your topic]."
-    }
-  ]
-}
-```
-
-Analise os três ficheiros a seguir e gere APENAS o JSON estruturado.
-"""
+def load_prompt_template():
+    """Carrega o conteúdo do prompt a partir do arquivo de template."""
+    global prompt_template_content
+    try:
+        with open(PROMPT_TEMPLATE_FILE, 'r', encoding='utf-8') as f:
+            prompt_template_content = f.read()
+        return True
+    except FileNotFoundError:
+        print(f"ERRO FATAL: O arquivo de template do prompt '{PROMPT_TEMPLATE_FILE}' não foi encontrado.")
+        return False
 
 def setup_gemini():
     """Configura o modelo Gemini com capacidade de visão."""
@@ -73,6 +47,20 @@ def setup_gemini():
         print(f"Erro ao configurar a API do Gemini: {e}")
         return False
 
+def parse_txt_header(file_path):
+    """Lê o cabeçalho de um arquivo .txt e extrai os metadados."""
+    metadata = {}
+    with open(file_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if line.strip() == '---':
+                break
+            match = re.match(r'([^:]+):\s*(.*)', line)
+            if match:
+                key = match.group(1).strip().lower().replace("_", "")
+                value = match.group(2).strip()
+                metadata[key] = value
+    return metadata
+
 async def structure_content_task(semaphore, entry_path, entry_name):
     """Função assíncrona que processa uma única entrada (pasta)."""
     async with semaphore:
@@ -84,6 +72,8 @@ async def structure_content_task(semaphore, entry_path, entry_name):
         if not (os.path.exists(txt_file_path) and os.path.exists(png_file_path) and os.path.exists(html_file_path)):
             return None
 
+        metadata = parse_txt_header(txt_file_path)
+        
         with open(txt_file_path, 'r', encoding='utf-8') as f:
             raw_text = f.read()
         with open(html_file_path, 'r', encoding='utf-8') as f:
@@ -92,9 +82,18 @@ async def structure_content_task(semaphore, entry_path, entry_name):
         try:
             img = Image.open(png_file_path)
             
+            # Formata o prompt que foi carregado do arquivo externo
+            prompt = prompt_template_content.format(
+                section=metadata.get('section', 'Geral'),
+                category=metadata.get('category', 'Geral'),
+                emoji=metadata.get('emoji', '✨'),
+                main_title=metadata.get('titulooriginal', 'Sem Título'),
+                source_url=metadata.get('url', '')
+            )
+            
             print(f"   -> Enviando para análise: {entry_name}")
             response = await gemini_model.generate_content_async([
-                META_PROMPT_FOR_STRUCTURING, 
+                prompt, 
                 "--- TEXTO BRUTO ---\n" + raw_text, 
                 "--- CÓDIGO-FONTE HTML ---\n" + raw_html,
                 img
@@ -110,46 +109,38 @@ async def structure_content_task(semaphore, entry_path, entry_name):
             return None
 
 async def main():
-    """Função principal assíncrona para orquestrar as tarefas."""
     is_demo_mode = '--demo' in sys.argv
     
+    # Carrega o prompt do arquivo antes de qualquer outra coisa
+    if not load_prompt_template():
+        return
     if not setup_gemini():
         return
-
     if not os.path.exists(INPUT_DIR):
         print(f"ERRO: O diretório de entrada '{INPUT_DIR}' não foi encontrado.")
         return
 
     all_entries = []
-    # Recolhe todas as entradas válidas primeiro
     for category_name in os.listdir(INPUT_DIR):
         category_path = os.path.join(INPUT_DIR, category_name)
         if os.path.isdir(category_path):
             for entry_name in os.listdir(category_path):
                 entry_path = os.path.join(category_path, entry_name)
-                # Garante que é uma pasta de conteúdo e não um ficheiro aleatório
                 if os.path.isdir(entry_path):
                     all_entries.append((entry_path, entry_name))
 
-    # Aplica o limite se estiver em modo demo
+    entries_to_process = all_entries[:DEMO_PROCESSING_LIMIT] if is_demo_mode else all_entries
     if is_demo_mode:
-        print(f"--- MODO DEMO: Processando as primeiras {DEMO_PROCESSING_LIMIT} entradas de {len(all_entries)} encontradas. ---")
-        entries_to_process = all_entries[:DEMO_PROCESSING_LIMIT]
-    else:
-        entries_to_process = all_entries
+        print(f"--- MODO DEMO: Processando as primeiras {len(entries_to_process)} entradas de {len(all_entries)} encontradas. ---")
 
     tasks = []
     semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
     print(f"\n--- Iniciando Estruturação Paralela de {len(entries_to_process)} entradas ---")
 
-    # Prepara as tarefas para as entradas selecionadas
     for entry_path, entry_name in entries_to_process:
         tasks.append(structure_content_task(semaphore, entry_path, entry_name))
 
-    # Executa as tarefas em paralelo
     results = await asyncio.gather(*tasks)
-    
-    # Filtra os resultados que falharam (None)
     all_structured_data = [res for res in results if res is not None]
     
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
