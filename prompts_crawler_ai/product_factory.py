@@ -109,17 +109,29 @@ def generate_index_page(data, template_html):
         guide_list_html += '</div></div>'
     
     search_index = []
-    for category, details in guides_by_category.items():
-        for guide in details["guides"]:
-            content = " ".join([d.get("content", "") for d in data if d.get("main_title") == guide["title"]])
-            search_index.append({"title": guide["title"], "category": category, "url": guide["url"], "content": content})
+    # Cria o índice de busca com título, categoria, url e conteúdo para uma busca mais completa
+    for entry in data:
+        title = entry.get("main_title")
+        if title:
+            content = " ".join([block.get("content", "") for block in entry.get("content_structure", [])])
+            s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
+            url_hash = hashlib.md5(entry.get("source_url", title).encode()).hexdigest()[:6]
+            filename = f"{s_title}_{url_hash}.html"
+            search_index.append({
+                "title": title, 
+                "category": entry.get("category", "Geral"), 
+                "url": filename, 
+                "content": content.lower() # Converte o conteúdo para minúsculas para facilitar a busca
+            })
 
+    # Injeta os dados do índice de busca no template
     js_data_line = f"const searchIndex = {json.dumps(search_index, ensure_ascii=False)};"
 
     final_html = template_html.replace('{product_name}', PRODUCT_NAME)
     final_html = final_html.replace('{guide_list}', guide_list_html)
     final_html = final_html.replace('{year}', time.strftime("%Y"))
     final_html = final_html.replace('{brand_name}', BRAND_NAME)
+    # A substituição corrigida funcionará aqui
     final_html = final_html.replace('// SEARCH_INDEX_PLACEHOLDER', js_data_line)
 
     generate_html_file(final_html, os.path.join(OUTPUT_DIR_FULL, "index.html"))

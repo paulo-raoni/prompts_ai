@@ -3,6 +3,7 @@ import time
 import re
 import requests
 import hashlib
+import sys # <--- 1. Importar a biblioteca sys
 from io import BytesIO
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
@@ -24,7 +25,7 @@ WEBSITE_USERNAME = os.getenv('WEBSITE_USERNAME')
 WEBSITE_PASSWORD = os.getenv('WEBSITE_PASSWORD')
 
 OUTPUT_DIR = 'BlackMagic_Prompts_Raw'
-CRAWL_LIMIT = 200
+# CRAWL_LIMIT será definido dinamicamente abaixo
 
 # --- FUNÇÕES AUXILIARES ---
 
@@ -82,7 +83,15 @@ def capture_stitched_screenshot(driver, path):
 # --- FUNÇÃO PRINCIPAL ---
 
 def main():
-    print("--- Iniciando Crawler (v14.0 - Nomes Descritivos) ---")
+    # --- 2. Lógica para definir o limite de crawling ---
+    is_demo_mode = '--demo' in sys.argv
+    if is_demo_mode:
+        CRAWL_LIMIT = 20
+        print("--- Iniciando Crawler (MODO DEMO - Limite de 20 páginas) ---")
+    else:
+        CRAWL_LIMIT = 200 # Ou o limite que desejar para a execução completa
+        print(f"--- Iniciando Crawler (Modo Completo - Limite de {CRAWL_LIMIT} páginas) ---")
+
     options = uc.ChromeOptions()
     driver = uc.Chrome(options=options, use_subprocess=True)
     driver.set_window_size(1280, 800)
@@ -101,6 +110,7 @@ def main():
         
         page_counter = 0
 
+        # O loop agora usará o CRAWL_LIMIT correto
         while q and page_counter < CRAWL_LIMIT:
             url_to_process = q.popleft()
             page_counter += 1
@@ -114,27 +124,20 @@ def main():
                 soup = BeautifulSoup(page_source, 'lxml')
                 
                 # --- LÓGICA DE NOMEAÇÃO E EXTRAÇÃO (ATUALIZADA) ---
-                
-                # Prioriza a tag <title> do HTML para nomes mais descritivos
                 title_element = soup.find('title')
                 if not title_element or not title_element.get_text(strip=True):
-                    # Se não houver <title>, usa o <h1> ou <h2> como fallback
                     title_element = soup.find('h1') or soup.find('h2')
                 
                 title = title_element.get_text(strip=True) if title_element else "Pagina_Sem_Titulo"
-
-                # Define a categoria (se existir) ou usa "Navegacao" como padrão
+                
                 main_content = soup.find('main', id='content')
                 category_element = main_content.find('h4', class_='elementor-heading-title') if main_content else None
                 category = category_element.get_text(strip=True) if category_element else "Navegacao"
                 
                 s_category = re.sub(r'[^\w\s-]', '', category).strip().replace(" ", "_")
-                
-                # Usa apenas o título da página para nomear, de forma mais limpa
                 s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
                 if not s_title: s_title = f"pagina_{page_counter}"
                 
-                # Lógica para evitar colisões de nome, criando versões.
                 original_s_title = s_title
                 output_path = os.path.join(OUTPUT_DIR, s_category, s_title)
                 version = 2
@@ -146,7 +149,6 @@ def main():
                 
                 os.makedirs(output_path, exist_ok=True)
                 
-                # Salva o texto bruto (se houver conteúdo principal)
                 if main_content:
                     page_text = main_content.get_text('\n', strip=True)
                     txt_file_path = os.path.join(output_path, f"{s_title}.txt")
@@ -156,16 +158,13 @@ def main():
                 else:
                     print("   -> Página sem conteúdo principal (<main>), salvando apenas HTML e screenshot.")
 
-                # Salva o HTML completo
                 html_file_path = os.path.join(output_path, f"{s_title}.html")
                 with open(html_file_path, 'w', encoding='utf-8') as f:
                     f.write(page_source)
                 print(f"   -> Código-fonte HTML salvo.")
                 
-                # Salva o screenshot costurado
                 capture_stitched_screenshot(driver, os.path.join(output_path, f"{s_title}.png"))
 
-                # Adiciona novos links à fila
                 links_on_page = soup.find_all('a', href=True)
                 for link in links_on_page:
                     href = link['href']
