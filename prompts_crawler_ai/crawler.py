@@ -1,21 +1,13 @@
 import os
 import time
 import re
-import requests
-import hashlib
-import sys # <--- 1. Importar a biblioteca sys
-from io import BytesIO
+import sys  # Importado para melhorar o tratamento de erro
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from collections import deque
 from dotenv import load_dotenv
-from PIL import Image
 
-import undetected_chromedriver as uc
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 
 # --- CONFIGURAÇÕES ---
 load_dotenv()
@@ -25,83 +17,50 @@ WEBSITE_USERNAME = os.getenv('WEBSITE_USERNAME')
 WEBSITE_PASSWORD = os.getenv('WEBSITE_PASSWORD')
 
 OUTPUT_DIR = 'BlackMagic_Prompts_Raw'
-# CRAWL_LIMIT será definido dinamicamente abaixo
 
-# --- FUNÇÕES AUXILIARES ---
-
-def perform_intelligent_login(driver, wait):
-    """Executa o fluxo de login multi-etapas."""
-    if not (WEBSITE_USERNAME and WEBSITE_PASSWORD):
-        print("AVISO: Credenciais não encontradas. O crawler continuará deslogado.")
-        return True
-    print("\n--- Iniciando Rotina de Login Inteligente ---")
-    try:
-        driver.get(START_URL)
-        wait.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, "Login"))).click()
-        time.sleep(2)
-        wait.until(EC.element_to_be_clickable((By.PARTIAL_LINK_TEXT, LOGIN_URL_HINT))).click()
-        time.sleep(2)
-        wait.until(EC.visibility_of_element_located((By.ID, "user_login"))).send_keys(WEBSITE_USERNAME)
-        driver.find_element(By.ID, "user_pass").send_keys(WEBSITE_PASSWORD)
-        driver.find_element(By.ID, "wp-submit").click()
-        time.sleep(5)
-        print(f"-> LOGIN BEM-SUCEDIDO! URL atual: {driver.current_url}")
-        return True
-    except Exception as e:
-        print(f"!!! ERRO CRÍTICO no login: {e}")
-        return False
-
-def capture_stitched_screenshot(driver, path):
-    """Rola a página e tira múltiplos screenshots, costurando-os numa imagem final."""
-    print("   -> Iniciando captura de screenshot costurado...")
-    driver.execute_script("window.scrollTo(0, 0)")
-    time.sleep(1)
-    viewport_height = driver.execute_script("return window.innerHeight")
-    total_height = driver.execute_script("return document.body.scrollHeight")
-    if total_height == 0: 
-        print("   -> AVISO: Página com altura zero, screenshot pode estar vazio.")
-        return False
-    
-    stitched_image = Image.new('RGB', (1280, total_height))
-    y_offset = 0
-    while y_offset < total_height:
-        driver.execute_script(f"window.scrollTo(0, {y_offset})")
-        time.sleep(0.5)
-        png_data = driver.get_screenshot_as_png()
-        screenshot = Image.open(BytesIO(png_data))
-        stitched_image.paste(screenshot, (0, y_offset))
-        y_offset += viewport_height
-        
-    try:
-        stitched_image.save(path)
-        print(f"   -> Screenshot costurado salvo com sucesso: {os.path.basename(path)}")
-        return True
-    except Exception as e:
-        print(f"   -> ERRO ao salvar screenshot costurado: {e}")
-        return False
-
-# --- FUNÇÃO PRINCIPAL ---
+# --- FUNÇÃO PRINCIPAL (Adaptada para Playwright) ---
 
 def main():
-    # --- 2. Lógica para definir o limite de crawling ---
     is_demo_mode = '--demo' in sys.argv
     if is_demo_mode:
         CRAWL_LIMIT = 20
-        print("--- Iniciando Crawler (MODO DEMO - Limite de 20 páginas) ---")
+        print("--- Iniciando Crawler com Playwright (MODO DEMO - Limite de 20 páginas) ---")
     else:
-        CRAWL_LIMIT = 200 # Ou o limite que desejar para a execução completa
-        print(f"--- Iniciando Crawler (Modo Completo - Limite de {CRAWL_LIMIT} páginas) ---")
+        CRAWL_LIMIT = 200
+        print(f"--- Iniciando Crawler com Playwright (Modo Completo - Limite de {CRAWL_LIMIT} páginas) ---")
 
-    options = uc.ChromeOptions()
-    driver = uc.Chrome(options=options, use_subprocess=True)
-    driver.set_window_size(1280, 800)
-    wait = WebDriverWait(driver, 20)
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False) 
+        page = browser.new_page()
 
-    try:
-        if not perform_intelligent_login(driver, wait):
-            return
+        try:
+            if WEBSITE_USERNAME and WEBSITE_PASSWORD:
+                print("\n--- Iniciando Rotina de Login com Playwright ---")
+                page.goto(START_URL, timeout=60000)
+                page.get_by_role("link", name=re.compile("Login", re.IGNORECASE)).click()
+                
+                # 1. CORREÇÃO: Usamos o nome exato do link de login para evitar ambiguidade.
+                # O log de erro nos informou que o nome do link correto é "ChatGPT Black Magic Login".
+                page.get_by_role("link", name="ChatGPT Black Magic Login").click()
+                
+                page.locator("#user_login").fill(WEBSITE_USERNAME)
+                page.locator("#user_pass").fill(WEBSITE_PASSWORD)
+                page.locator("#wp-submit").click()
+                
+                page.wait_for_load_state('networkidle', timeout=60000)
+                print(f"-> LOGIN BEM-SUCEDIDO! URL atual: {page.url}")
+            else:
+                print("AVISO: Credenciais não encontradas. O crawler continuará deslogado.")
+                page.goto(START_URL, timeout=60000)
 
-        start_page_after_login = driver.current_url
+        except (PlaywrightTimeoutError, Exception) as e:
+            print(f"!!! ERRO CRÍTICO no login: {e}")
+            browser.close()
+            # 2. CORREÇÃO: O script agora termina com um código de erro.
+            # Isso fará com que o `main.py` pare o pipeline imediatamente.
+            sys.exit(1)
+            
+        start_page_after_login = page.url
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
         q = deque([start_page_after_login])
@@ -110,24 +69,17 @@ def main():
         
         page_counter = 0
 
-        # O loop agora usará o CRAWL_LIMIT correto
         while q and page_counter < CRAWL_LIMIT:
             url_to_process = q.popleft()
             page_counter += 1
             print(f"\nProcessando [{page_counter}/{CRAWL_LIMIT}]: {url_to_process}")
 
             try:
-                driver.get(url_to_process)
-                wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-                
-                page_source = driver.page_source
+                page.goto(url_to_process, wait_until='domcontentloaded', timeout=60000)
+                page_source = page.content()
                 soup = BeautifulSoup(page_source, 'lxml')
                 
-                # --- LÓGICA DE NOMEAÇÃO E EXTRAÇÃO (ATUALIZADA) ---
-                title_element = soup.find('title')
-                if not title_element or not title_element.get_text(strip=True):
-                    title_element = soup.find('h1') or soup.find('h2')
-                
+                title_element = soup.find('title') or soup.find('h1') or soup.find('h2')
                 title = title_element.get_text(strip=True) if title_element else "Pagina_Sem_Titulo"
                 
                 main_content = soup.find('main', id='content')
@@ -142,7 +94,6 @@ def main():
                 output_path = os.path.join(OUTPUT_DIR, s_category, s_title)
                 version = 2
                 while os.path.exists(output_path):
-                    print(f"   -> AVISO: A pasta '{s_title}' já existe. Tentando versão {version}...")
                     s_title = f"{original_s_title}_v{version}"
                     output_path = os.path.join(OUTPUT_DIR, s_category, s_title)
                     version += 1
@@ -154,16 +105,16 @@ def main():
                     txt_file_path = os.path.join(output_path, f"{s_title}.txt")
                     with open(txt_file_path, 'w', encoding='utf-8') as f:
                         f.write(f"URL: {url_to_process}\nCATEGORIA_ORIGINAL: {category}\nTITULO_ORIGINAL: {title}\n---\n\n{page_text}")
-                    print(f"   -> Texto bruto salvo.")
-                else:
-                    print("   -> Página sem conteúdo principal (<main>), salvando apenas HTML e screenshot.")
+                    print("   -> Texto bruto salvo.")
 
                 html_file_path = os.path.join(output_path, f"{s_title}.html")
                 with open(html_file_path, 'w', encoding='utf-8') as f:
                     f.write(page_source)
-                print(f"   -> Código-fonte HTML salvo.")
+                print("   -> Código-fonte HTML salvo.")
                 
-                capture_stitched_screenshot(driver, os.path.join(output_path, f"{s_title}.png"))
+                screenshot_path = os.path.join(output_path, f"{s_title}.png")
+                page.screenshot(path=screenshot_path, full_page=True)
+                print(f"   -> Screenshot de página inteira salvo com sucesso: {os.path.basename(screenshot_path)}")
 
                 links_on_page = soup.find_all('a', href=True)
                 for link in links_on_page:
@@ -176,13 +127,10 @@ def main():
                                     visited_urls.add(full_url)
                                     q.append(full_url)
                 
-            except Exception as e:
-                print(f"   -> ERRO CRÍTICO ao processar a página. Erro: {e}")
+            except (PlaywrightTimeoutError, Exception) as e:
+                print(f"   -> ERRO CRÍTICO ao processar a página {url_to_process}. Erro: {e}")
 
-    except Exception as e:
-        print(f"ERRO NA EXECUÇÃO PRINCIPAL: {e}")
-    finally:
-        driver.quit()
+        browser.close()
         print("\n--- CRAWLER FINALIZADO ---")
 
 if __name__ == '__main__':

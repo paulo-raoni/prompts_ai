@@ -3,6 +3,4 @@ python-dotenv
 google-generativeai
 lxml
 requests
-selenium
-undetected-chromedriver
-Pillow
+playwright
