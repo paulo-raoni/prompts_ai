@@ -18,59 +18,60 @@ WEBSITE_PASSWORD = os.getenv('WEBSITE_PASSWORD')
 
 OUTPUT_DIR = 'Arsenal_Dev_AI_Raw'
 
-# --- NOVA FUNÇÃO PARA PARSEAR O MENU ---
+# --- FUNÇÃO DE PARSE DO MENU (VERSÃO FINAL E PRECISA v5) ---
 def parse_menu_structure(soup, base_url):
     """
-    Analisa o HTML da página do menu para extrair a estrutura de seções, 
-    categorias, emojis e URLs.
-    Retorna um dicionário mapeando URL para suas informações.
+    Analisa o HTML da página do menu (baseado no debug_menu_page.html)
+    para extrair a estrutura de forma precisa, usando o contêiner pai como referência.
     """
-    print("   -> Analisando a estrutura do menu principal...")
+    print("   -> Analisando a estrutura do menu principal (Lógica v5)...")
     menu_map = {}
     
-    # Encontra todos os contêineres de seção (ajuste o seletor se necessário)
-    sections = soup.find_all('div', class_='elementor-widget-container')
-
-    current_section_title = "Sem Seção"
+    # Encontra todos os contêineres de seção de nível superior
+    section_containers = soup.select('div.elementor-element[data-element_type="container"]')
     
-    for section in sections:
-        # Encontra o título da seção
-        title_element = section.find(['h3', 'h4'], class_='elementor-heading-title')
-        if title_element and title_element.get_text(strip=True):
-            current_section_title = title_element.get_text(strip=True)
+    for container in section_containers:
+        # Procura um título de seção DENTRO do contêiner atual
+        title_element = container.select_one('h2.elementor-heading-title')
+        if not title_element:
+            continue
+            
+        section_text_full = title_element.get_text(strip=True)
+        # Ignora títulos que não são de seções de menu
+        if "Trying to find a prompt?" in section_text_full or "Need help?" in section_text_full:
+            continue
 
-        # Encontra todos os links de categoria dentro da seção
-        category_links = section.find_all('a')
+        emoji_match = re.match(r'^(\W+)', section_text_full)
+        if emoji_match:
+            section_emoji = emoji_match.group(1).strip()
+            section_title = section_text_full.replace(section_emoji, '', 1).strip()
+        else:
+            section_emoji = "✨"
+            section_title = section_text_full
+
+        # Procura todos os links de prompts DENTRO do mesmo contêiner
+        category_links = container.select('h3.elementor-post__title a')
         
         for link in category_links:
             href = link.get('href')
-            if not href or '#' in href:
+            if not href or href.startswith('#') or not href.strip():
                 continue
 
             full_url = urljoin(base_url, href)
-            
-            # Extrai emoji e texto do link
-            link_text = link.get_text(strip=True)
-            emoji_match = re.match(r'(\W+)\s*(.*)', link_text)
-            
-            if emoji_match:
-                emoji = emoji_match.group(1).strip()
-                category_name = emoji_match.group(2).strip()
-            else:
-                emoji = "✨" # Emoji padrão
-                category_name = link_text
+            category_name = link.get_text(strip=True)
 
-            menu_map[full_url] = {
-                "section": current_section_title,
-                "category": category_name,
-                "emoji": emoji
-            }
+            if full_url not in menu_map:
+                menu_map[full_url] = {
+                    "section": section_title,
+                    "category": category_name,
+                    "emoji": section_emoji 
+                }
             
     print(f"   -> Estrutura do menu mapeada. {len(menu_map)} itens encontrados.")
     return menu_map
 
-# --- FUNÇÃO PRINCIPAL ---
 
+# --- FUNÇÃO PRINCIPAL ---
 def main():
     is_demo_mode = '--demo' in sys.argv
     if is_demo_mode:
@@ -107,12 +108,36 @@ def main():
         start_page_after_login = page.url
         os.makedirs(OUTPUT_DIR, exist_ok=True)
 
-        # --- Executa a nova lógica de parse do menu ---
         page_source_menu = page.content()
+        
+        # --- NOVO BLOCO: Guardar o Menu Principal ---
+        print("\n-> Guardando dados da página do menu principal...")
+        menu_output_path = os.path.join(OUTPUT_DIR, "_Menu_Principal")
+        os.makedirs(menu_output_path, exist_ok=True)
+        try:
+            # Guarda o screenshot completo
+            menu_screenshot_path = os.path.join(menu_output_path, "screenshot_menu.png")
+            page.screenshot(path=menu_screenshot_path, full_page=True)
+            print(f"   -> Screenshot do menu guardado em: {menu_screenshot_path}")
+            
+            # Guarda o HTML
+            menu_html_path = os.path.join(menu_output_path, "menu_principal.html")
+            with open(menu_html_path, 'w', encoding='utf-8') as f:
+                f.write(page_source_menu)
+            print(f"   -> HTML do menu guardado em: {menu_html_path}")
+        except Exception as e:
+            print(f"   -> ERRO ao guardar dados do menu: {e}")
+        # --- FIM DO NOVO BLOCO ---
+
         soup_menu = BeautifulSoup(page_source_menu, 'lxml')
         menu_structure_map = parse_menu_structure(soup_menu, start_page_after_login)
 
-        q = deque(menu_structure_map.keys()) # A fila agora começa com as URLs do menu
+        if not menu_structure_map:
+            print("!!! ERRO FATAL: Nenhuma estrutura de menu foi extraída. O crawler não pode continuar.")
+            browser.close()
+            sys.exit(1)
+            
+        q = deque(menu_structure_map.keys())
         visited_urls = set(menu_structure_map.keys())
         
         page_counter = 0
@@ -130,7 +155,6 @@ def main():
                 title_element = soup_prompt.find('title') or soup_prompt.find('h1') or soup_prompt.find('h2')
                 title = title_element.get_text(strip=True) if title_element else "Pagina_Sem_Titulo"
                 
-                # Resgata as informações do menu do nosso mapa
                 menu_info = menu_structure_map.get(url_to_process, {})
                 section = menu_info.get("section", "Geral")
                 category = menu_info.get("category", "Geral")
@@ -140,10 +164,10 @@ def main():
                 s_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")
                 if not s_title: s_title = f"pagina_{page_counter}"
                 
-                output_path = os.path.join(OUTPUT_DIR, s_category, s_title)
+                output_path = os.path.join(OUTPUT_DIR, re.sub(r'[^\w\s-]', '', section).strip().replace(" ", "_"), s_category, s_title)
                 
                 if os.path.exists(output_path):
-                     print(f"   -> AVISO: A pasta '{s_title}' já existe. Pulando para evitar duplicatas.")
+                     print(f"   -> AVISO: A pasta '{s_title}' já existe. Pulando.")
                      continue
                 
                 os.makedirs(output_path, exist_ok=True)
@@ -153,7 +177,6 @@ def main():
                     page_text = main_content.get_text('\n', strip=True)
                     txt_file_path = os.path.join(output_path, f"{s_title}.txt")
                     with open(txt_file_path, 'w', encoding='utf-8') as f:
-                        # --- Adiciona os novos dados ao arquivo .txt ---
                         f.write(f"URL: {url_to_process}\n")
                         f.write(f"SECTION: {section}\n")
                         f.write(f"CATEGORY: {category}\n")
@@ -168,7 +191,7 @@ def main():
                 
                 screenshot_path = os.path.join(output_path, f"{s_title}.png")
                 page.screenshot(path=screenshot_path, full_page=True)
-                print(f"   -> Screenshot de página inteira salvo.")
+                print("   -> Screenshot de página inteira salvo.")
                 
             except (PlaywrightTimeoutError, Exception) as e:
                 print(f"   -> ERRO CRÍTICO ao processar a página {url_to_process}. Erro: {e}")

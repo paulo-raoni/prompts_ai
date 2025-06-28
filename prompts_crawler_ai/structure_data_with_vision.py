@@ -11,14 +11,12 @@ from PIL import Image
 load_dotenv()
 INPUT_DIR = 'Arsenal_Dev_AI_Raw' 
 OUTPUT_FILE = 'prompts_database_structured.json'
-# --- O NOME DO NOSSO NOVO ARQUIVO DE TEMPLATE ---
 PROMPT_TEMPLATE_FILE = 'structure_prompt_template.txt'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 CONCURRENCY_LIMIT = 5
 DEMO_PROCESSING_LIMIT = 20
 
 gemini_model = None
-# --- A VARIÁVEL DO PROMPT SERÁ CARREGADA DO ARQUIVO ---
 prompt_template_content = ""
 
 def load_prompt_template():
@@ -70,6 +68,7 @@ async def structure_content_task(semaphore, entry_path, entry_name):
         html_file_path = os.path.join(entry_path, f"{entry_name}.html")
 
         if not (os.path.exists(txt_file_path) and os.path.exists(png_file_path) and os.path.exists(html_file_path)):
+            print(f"      -> AVISO: Faltando arquivos para '{entry_name}'. Pulando.")
             return None
 
         metadata = parse_txt_header(txt_file_path)
@@ -82,7 +81,6 @@ async def structure_content_task(semaphore, entry_path, entry_name):
         try:
             img = Image.open(png_file_path)
             
-            # Formata o prompt que foi carregado do arquivo externo
             prompt = prompt_template_content.format(
                 section=metadata.get('section', 'Geral'),
                 category=metadata.get('category', 'Geral'),
@@ -99,19 +97,27 @@ async def structure_content_task(semaphore, entry_path, entry_name):
                 img
             ])
             
+            # Adiciona uma verificação para garantir que a resposta não está vazia ou bloqueada
+            if not response.parts:
+                print(f"      -> ERRO: A API retornou uma resposta vazia para '{entry_name}'. Possivelmente bloqueado por segurança.")
+                return None
+
             cleaned_response = response.text.strip().lstrip("```json").rstrip("```").strip()
             structured_data = json.loads(cleaned_response)
             print(f"   -> Análise concluída: {entry_name}")
             return structured_data
 
         except Exception as e:
-            print(f"      -> ERRO ao processar {entry_name}: {e}")
+            # --- TRATAMENTO DE ERRO MELHORADO ---
+            # Imprime o erro exato que está a acontecer
+            print(f"      -> ERRO FATAL AO PROCESSAR '{entry_name}': {e}")
+            # Você pode descomentar a linha abaixo para fazer o pipeline parar imediatamente
+            # sys.exit(1) 
             return None
 
 async def main():
     is_demo_mode = '--demo' in sys.argv
     
-    # Carrega o prompt do arquivo antes de qualquer outra coisa
     if not load_prompt_template():
         return
     if not setup_gemini():
@@ -121,17 +127,24 @@ async def main():
         return
 
     all_entries = []
-    for category_name in os.listdir(INPUT_DIR):
-        category_path = os.path.join(INPUT_DIR, category_name)
-        if os.path.isdir(category_path):
-            for entry_name in os.listdir(category_path):
-                entry_path = os.path.join(category_path, entry_name)
-                if os.path.isdir(entry_path):
-                    all_entries.append((entry_path, entry_name))
+    # Lógica corrigida para encontrar as pastas corretas
+    for root, dirs, files in os.walk(INPUT_DIR):
+        # Estamos à procura de pastas que contenham um .txt, .png e .html com o mesmo nome da pasta
+        if os.path.basename(root) + ".txt" in files:
+            entry_path = root
+            entry_name = os.path.basename(root)
+            all_entries.append((entry_path, entry_name))
 
     entries_to_process = all_entries[:DEMO_PROCESSING_LIMIT] if is_demo_mode else all_entries
     if is_demo_mode:
         print(f"--- MODO DEMO: Processando as primeiras {len(entries_to_process)} entradas de {len(all_entries)} encontradas. ---")
+
+    if not entries_to_process:
+        print("AVISO: Nenhuma entrada válida foi encontrada para processar.")
+        # Cria um arquivo vazio para não quebrar o resto do pipeline em caso de 0 entradas
+        with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+            json.dump([], f)
+        return
 
     tasks = []
     semaphore = asyncio.Semaphore(CONCURRENCY_LIMIT)
