@@ -26,42 +26,46 @@ gemini_model = None
 
 # --- PROMPTS DE IA ---
 
-# PROMPT PARA GERAR DO ZERO (V5 - FOCO EM SIMPLICIDADE)
+# PROMPT PARA GERAR DO ZERO (V10 - IA GERA LINKS)
 VIDEO_WRITER_PROMPT_TEMPLATE = """
-Você é um excelente professor, especialista em explicar conceitos de tecnologia de forma muito simples e direta.
+Você é um excelente professor e redator técnico.
 
 **SUA TAREFA:**
-Sua missão é criar um texto curto (2 parágrafos, no máximo) que explique para que serve o método ou prompt apresentado no contexto. O objetivo é que qualquer pessoa, mesmo sem experiência, entenda o que o prompt faz e como pode usá-lo.
+Criar um texto curto e simples que explique o método do prompt no contexto abaixo, seguindo passos rigorosos.
 
-**REGRAS CRÍTICAS:**
-1.  **Simplicidade Absoluta:** Use uma linguagem extremamente clara e direta. Evite jargões técnicos. Imagine que está a escrever para alguém que está a começar agora no mundo da IA. O objetivo é que a pessoa leia e diga "Ah, entendi! É só isso?".
-2.  **Foco no "O Quê" e "Porquê":** Explique o que o prompt faz e qual o benefício de o usar.
-3.  **Texto Fluido e Curto:** A saída deve ser um texto corrido. NUNCA use listas numeradas ou com marcadores.
-4.  **Seja Genérico:** Não mencione nomes de ferramentas (Canva, TikTok, etc.), a menos que seja essencial para o contexto do prompt.
-5.  **Substituição de Marca (OBRIGATÓRIO):** "Black Magic" ou "AI Avalanche" devem se tornar "Arsenal Dev AI" ou "Brazilian Dev".
-6.  **Saída Limpa:** Gere apenas o texto da explicação, sem títulos ou introduções.
+**PASSOS DE EXECUÇÃO OBRIGATÓRIOS:**
+1.  **CRIE A EXPLICAÇÃO:** Escreva um texto claro e direto sobre o método, indo direto ao ponto. Mantenha a separação de parágrafos se houver várias ideias distintas.
+2.  **GENERALIZE FERRAMENTAS DE IA:** No texto, generalize menções a 'ChatGPT', 'OpenAI', etc., para "a sua ferramenta de IA de preferência". Generalize "chave de API do ChatGPT", etc., para "a sua chave de API da ferramenta de IA escolhida".
+3.  **CRIE LINKS HTML:** No texto final, transforme URLs (como 'www.make.com') e frases especiais em links HTML.
+    * O link deve abrir em nova aba (`target="_blank"`).
+    * A frase "sua chave de API da ferramenta de IA escolhida" deve virar um link para a pesquisa: `<a href="https://www.google.com/search?q=obter+chave+de+API+para+ferramentas+de+IA" target="_blank" class="text-blue-400 hover:underline">sua chave de API da ferramenta de IA escolhida</a>`.
+4.  **LIMPEZA:** Remova frases sobre "vídeo", "template abaixo" ou "clique aqui".
+5.  **SUBSTITUA A MARCA:** Troque "Black Magic" ou "AI Avalanche" por "Arsenal Dev AI".
+6.  **RETORNE O RESULTADO:** Apresente apenas o texto final, já com as tags <a>, sem introduções.
 
 **CONTEXTO DA PÁGINA:**
 {page_context}
 
-**EXPLIQUE AGORA O MÉTODO DE FORMA MUITO SIMPLES:**
+**AGORA, EXECUTE OS 6 PASSOS E RETORNE O TEXTO FINAL:**
 """
 
-# PROMPT PARA APENAS MELHORAR (V2 - FOCO EM SIMPLICIDADE)
+# PROMPT PARA ADAPTAR TUTORIAIS (V8 - IA GERA LINKS)
 ENHANCE_METHOD_PROMPT = """
-Você é um Redator Técnico e Editor, especialista em adaptar tutoriais de uma plataforma para outra.
+Você é um Redator Técnico e Editor especialista em adaptar tutoriais.
 
 **SUA TAREFA:**
-Sua missão é **traduzir e adaptar** o texto do tutorial abaixo para a nossa plataforma, "Arsenal Dev AI". O objetivo é que o tutorial permaneça prático e funcional para o nosso utilizador.
+Processar o texto do tutorial abaixo através de uma série de passos de adaptação.
 
-**LÓGICA DE EXECUÇÃO OBRIGATÓRIA:**
-
-1.  **Traduza e Adapte:** Traduza todo o texto para um Português do Brasil claro e natural.
-2.  **Preservação de Informação Crítica:** **MANTENHA** todos os passos práticos, links (ex: `www.make.com`), e menções a ferramentas essenciais (ex: `ChatGPT API key`). Esta informação é vital e não deve ser removida ou generalizada. O utilizador precisa dela para seguir o tutorial.
-3.  **Substituição de Marca:** Substitua menções a marcas concorrentes ("Black Magic", "AI Avalanche") pela nossa marca ("Arsenal Dev AI" ou "Brazilian Dev").
-4.  **Clareza:** Se o texto original for confuso, melhore a redação para torná-lo mais claro, mas **sem remover os passos essenciais**.
-5.  **Formato:** Mantenha o texto em parágrafos. Não adicione listas se não existirem no original.
-6.  **Saída Limpa:** Retorne apenas o texto final do tutorial, sem introduções.
+**EXECUTE OS SEGUINTES PASSOS DE ADAPTAÇÃO NA ORDEM INDICADA:**
+1.  **TRADUZA E PARAGRAFE:** Traduza para um Português do Brasil claro. Mantenha a estrutura de parágrafos do original para garantir a legibilidade.
+2.  **SUBSTITUA MARCAS:** Substitua "Black Magic" ou "AI Avalanche" por "Arsenal Dev AI".
+3.  **GENERALIZE FERRAMENTAS DE IA:** Generalize "ChatGPT" ou "OpenAI" para "a sua ferramenta de IA de preferência". Generalize "chave de API do ChatGPT" para "a sua chave de API da ferramenta de IA escolhida".
+4.  **CRIE LINKS HTML:** No texto final, transforme URLs (como 'www.make.com') e frases especiais em links HTML.
+    * Todos os links devem abrir em nova aba (`target="_blank"`).
+    * A frase "sua chave de API da ferramenta de IA escolhida" DEVE virar um link para a pesquisa: `<a href="https://www.google.com/search?q=obter+chave+de+API+para+ferramentas+de+IA" target="_blank" class="text-blue-400 hover:underline">sua chave de API da ferramenta de IA escolhida</a>`.
+5.  **REMOVA REFERÊNCIAS INÚTEIS:** Elimine completamente do texto frases que mencionem "vídeo", "template abaixo" ou "clique aqui".
+6.  **PRESERVE O RESTO:** Mantenha todos os outros passos práticos e URLs explícitas.
+7.  **RETORNE O RESULTADO:** Apresente apenas o texto final já formatado com as tags <a>, sem introduções.
 
 **TEXTO ORIGINAL PARA ANÁLISE:**
 {existing_explanation}
@@ -69,7 +73,7 @@ Sua missão é **traduzir e adaptar** o texto do tutorial abaixo para a nossa pl
 **CONTEXTO ADICIONAL DA PÁGINA (TÍTULO E PROMPTS):**
 {page_context}
 
-**AGORA, TRADUZA E ADAPTE O TUTORIAL SEGUINDO TODAS AS REGRAS:**
+**AGORA, PROCESSE O TEXTO SEGUINDO OS 7 PASSOS E RETORNE APENAS O RESULTADO FINAL:**
 """
 
 # --- FUNÇÕES AUXILIARES ---
@@ -114,7 +118,6 @@ def load_video_cache():
 
 def save_video_cache(cache):
     with open(VIDEO_CONTENT_CACHE_FILE, 'w', encoding='utf-8') as f: json.dump(cache, f, indent=4, ensure_ascii=False)
-
 
 # --- LÓGICA DE GERAÇÃO (ESTRUTURA PRINCIPAL) ---
 
@@ -283,46 +286,46 @@ def consolidate_method_explanation(original_structure, page_context, video_cache
     return clean_structure
 
 def render_content_structure(structure, titles_to_ignore):
-    """Renderiza uma estrutura de conteúdo JÁ LIMPA, sem lógicas complexas."""
+    """Renderiza uma estrutura de conteúdo que JÁ VEM com HTML de links da IA."""
     content_html = ""
     prompt_count = sum(1 for block in structure if block.get("type") == "prompt")
 
     for block in structure:
-        block_type = block.get("type", "paragraph")
+        block_type = block.get("type")
         block_content = block.get("content", "")
-        
-        if block_content.strip() in titles_to_ignore:
+
+        if block_content.strip() in titles_to_ignore or not block_content:
             continue
+
+        if block_type in ["ai_explanation", "paragraph"]:
+            # O conteúdo já vem com links da IA, então apenas trocamos quebras de linha por <br>
+            # Não usamos html.escape() aqui para permitir que os links funcionem.
+            final_content = block_content.replace("\n", "<br>")
             
-        safe_block_content = html.escape(block_content) if block_type not in ['paragraph', 'ai_explanation'] else block.get("content", "")
-        if not safe_block_content:
-            continue
+            if block_type == "ai_explanation":
+                content_html += f'<div class="bg-gray-900/50 p-6 my-6"><div class="text-gray-300 space-y-4">{final_content}</div></div>'
+            else:
+                content_html += f'<p class="text-gray-300 text-lg mb-4">{final_content}</p>'
         
-        if block_type == "ai_explanation":
-            formatted_text_for_html = block_content.replace("\n", "<br>")
-            content_html += f'''
-            <div class="bg-gray-900/50 p-6 my-6">
-                <div class="text-gray-300 space-y-4">{formatted_text_for_html}</div>
-            </div>
-            '''
         elif block_type == "subheading":
+            # Títulos são sempre texto puro, então devem ser escapados.
+            escaped_content = html.escape(block_content)
             if "comandos" in block_content.lower() or "prompts" in block_content.lower():
                 heading_text = "O Comando" if prompt_count == 1 else "Os Comandos"
                 content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{heading_text}</h3>'
             else:
-                content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{safe_block_content}</h3>'
-        
-        elif block_type == "paragraph":
-            content_html += f'<p class="text-gray-300 text-lg mb-4">{safe_block_content}</p>'
+                content_html += f'<h3 class="text-2xl font-bold mt-12 mb-4 border-l-4 border-blue-500 pl-4">{escaped_content}</h3>'
         
         elif block_type == "prompt":
+            # O conteúdo de um prompt DEVE ser escapado.
+            escaped_content = html.escape(block_content)
             content_html += f'''
                 <div class="bg-gray-800 rounded-xl border border-gray-700 my-6">
                     <div class="px-6 py-4 border-b border-gray-700 text-gray-300 font-semibold flex justify-between items-center">
                         <span>Prompt de Comando</span>
                         <button class="copy-button bg-gray-700 hover:bg-gray-600 text-white font-bold py-1 px-3 rounded-lg text-sm transition-all">Copiar</button>
                     </div>
-                    <div class="p-6"><pre class="whitespace-pre-wrap font-mono text-gray-200"><code>{html.escape(block_content)}</code></pre></div>
+                    <div class="p-6"><pre class="whitespace-pre-wrap font-mono text-gray-200"><code>{escaped_content}</code></pre></div>
                 </div>'''
                 
     return content_html
