@@ -14,6 +14,14 @@
             background-color: #111827;
             color: #F9FAFB;
         }
+        /* Estilos para a barra de pesquisa e resultados */
+        .search-container { margin-bottom: 50px; position: relative; }
+        #search-input { width: 100%; padding: 15px; font-size: 1.1rem; border-radius: 8px; border: 2px solid #374151; background-color: #1F2937; color: #F9FAFB; box-sizing: border-box; }
+        #search-results { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; background-color: #1F2937; border-radius: 8px; position: absolute; width: 100%; z-index: 1000; display: none; border: 1px solid #374151; }
+        #search-results li a { display: block; padding: 15px; color: #F9FAFB; text-decoration: none; border-bottom: 1px solid #374151; }
+        #search-results li:last-child a { border-bottom: none; }
+        #search-results li a:hover { background-color: #3B82F6; }
+        #search-results li a span { display: block; font-size: 0.9rem; color: #9CA3AF; }
     </style>
 </head>
 <body class="min-h-screen">
@@ -24,18 +32,73 @@
                 <span class="text-5xl">{emoji}</span>
                 {category_title}
             </h1>
-            <p class="text-lg text-gray-400 mt-2">Prompts disponíveis nesta categoria:</p>
         </header>
 
-        <main>
-            <div class="space-y-4">
-                {prompt_list}
-            </div>
+        <div class="search-container">
+            <input type="text" id="search-input" placeholder="Buscar por prompts nesta categoria...">
+            <ul id="search-results"></ul>
+        </div>
+        
+        <main id="guide-container">
+            {prompt_list}
         </main>
     </div>
 
     <footer class="text-center p-8 mt-16 border-t border-gray-800">
         <p class="text-gray-500">© {year} {brand_name}. Todos os direitos reservados.</p>
     </footer>
+
+    <script>
+        // SEARCH_INDEX_PLACEHOLDER
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('search-input');
+            const searchResults = document.getElementById('search-results');
+            const guideContainer = document.getElementById('guide-container');
+            
+            if (typeof searchIndex === 'undefined' || !Array.isArray(searchIndex)) {
+                console.error('Índice de busca não foi carregado corretamente.');
+                searchInput.disabled = true;
+                searchInput.placeholder = "Erro ao carregar a busca.";
+                return;
+            }
+
+            searchInput.addEventListener('keyup', (e) => {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                
+                if (searchTerm.length < 2) {
+                    searchResults.innerHTML = '';
+                    searchResults.style.display = 'none';
+                    guideContainer.style.display = 'block';
+                    return;
+                }
+                
+                guideContainer.style.display = 'none';
+                searchResults.style.display = 'block';
+
+                const results = searchIndex.filter(item => 
+                    (item.title && item.title.toLowerCase().includes(searchTerm)) || 
+                    (item.content && item.content.toLowerCase().includes(searchTerm))
+                );
+
+                searchResults.innerHTML = '';
+                if (results.length > 0) {
+                    results.forEach(item => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<a href="${item.url}">${item.title}</a>`;
+                        searchResults.appendChild(li);
+                    });
+                } else {
+                    searchResults.innerHTML = '<li><a>Nenhum resultado encontrado.</a></li>';
+                }
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!searchResults.contains(e.target) && e.target !== searchInput) {
+                    searchResults.style.display = 'none';
+                }
+            });
+        });
+    </script>
 </body>
 </html>

@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{product_name} - Índice de Prompts</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
-        /* Estilos gerais... */
         body { font-family: 'Inter', sans-serif; background-color: #111827; color: #F9FAFB; margin: 0; padding: 20px; }
         @media (min-width: 768px) { body { padding: 40px; } }
         .container { max-width: 1200px; margin: auto; }
         .header { text-align: center; margin-bottom: 50px; }
         .header h1 { font-size: 3rem; font-weight: 900; }
         .header p { font-size: 1.25rem; color: #9CA3AF; }
-        /* Estilos da busca... */
         .search-container { margin-bottom: 50px; position: relative; }
         #search-input { width: 100%; padding: 15px; font-size: 1.1rem; border-radius: 8px; border: 2px solid #374151; background-color: #1F2937; color: #F9FAFB; box-sizing: border-box; }
         #search-results { list-style: none; padding: 0; margin-top: 10px; max-height: 400px; overflow-y: auto; background-color: #1F2937; border-radius: 8px; position: absolute; width: 100%; z-index: 1000; display: none; border: 1px solid #374151; }
@@ -23,12 +22,26 @@
         #search-results li:last-child a { border-bottom: none; }
         #search-results li a:hover { background-color: #3B82F6; }
         #search-results li a span { display: block; font-size: 0.9rem; color: #9CA3AF; }
-        /* Estilos da lista de guias... */
-        .category-section { margin-bottom: 40px; }
-        .category-section h2 { font-size: 2rem; border-bottom: 2px solid #3B82F6; padding-bottom: 10px; margin-bottom: 20px;}
-        .guide-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
-        .guide-card { display: flex; align-items: center; background-color: #1F2937; padding: 20px; border-radius: 8px; text-decoration: none; color: #F9FAFB; border: 1px solid #374151; transition: all 0.2s ease; min-height: 60px; }
-        .guide-card:hover { transform: translateY(-5px); border-color: #3B82F6; }
+        
+        /* Ajuste no guide-card para usar flexbox e garantir alinhamento */
+        .guide-card { 
+            display: flex; 
+            flex-direction: column; /* Organiza os itens em coluna */
+            background-color: #1F2937; 
+            border: 1px solid #374151;
+            transition: all 0.2s ease;
+        }
+        .guide-card:hover { 
+            transform: translateY(-5px); 
+            border-color: #3B82F6; 
+        }
+        
+        /* Estilo para a lista ordenada dentro dos cards */
+        .guide-card ol li::marker {
+            color: #6B7280; /* Cor cinza para os números */
+            font-weight: 600;
+        }
+
         footer { text-align: center; margin-top: 80px; padding-top: 30px; border-top: 1px solid #374151; font-size: 0.875rem; color: #9CA3AF; }
     </style>
 </head>
@@ -52,7 +65,6 @@
     <footer><p>© {year} {brand_name}. Todos os direitos reservados.</p></footer>
 
     <script>
-        // CORREÇÃO: Os dados da busca serão injetados aqui pelo Python.
         // SEARCH_INDEX_PLACEHOLDER
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -66,8 +78,6 @@
                 searchInput.placeholder = "Erro ao carregar a busca.";
                 return;
             }
-
-            console.log('Índice de busca carregado:', searchIndex.length, 'guias.');
 
             searchInput.addEventListener('keyup', (e) => {
                 const searchTerm = e.target.value.toLowerCase().trim();
