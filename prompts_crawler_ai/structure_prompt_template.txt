@@ -15,6 +15,7 @@ Eu já extraí os metadados principais da página. Use-os como base para o seu J
     * `paragraph`: Para textos e explicações.
     * `subheading`: Para títulos de seção internos.
     * `prompt`: Para os blocos de código/prompts.
+4.  **Diferenciação de Conteúdo:** Um `prompt` é um bloco de texto destinado a ser copiado e colado numa IA. Geralmente, está dentro de tags `<code>` ou `<pre>`, ou numa caixa de texto visualmente distinta. Não confunda um prompt com um `paragraph` (um texto normal de explicação) ou um `subheading` (um título de secção).
 
 **Formato de Saída Obrigatório:**
 Gere **APENAS** o objeto JSON completo, combinando os metadados que eu forneci com a "content_structure" que você criou.

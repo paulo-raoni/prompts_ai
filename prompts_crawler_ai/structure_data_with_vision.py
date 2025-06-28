@@ -14,7 +14,7 @@ OUTPUT_FILE = 'prompts_database_structured.json'
 PROMPT_TEMPLATE_FILE = 'structure_prompt_template.txt'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 CONCURRENCY_LIMIT = 5
-DEMO_PROCESSING_LIMIT = 20
+DEMO_PROCESSING_LIMIT = 5
 
 gemini_model = None
 prompt_template_content = ""
