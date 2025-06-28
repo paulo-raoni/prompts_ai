@@ -31,17 +31,15 @@ VIDEO_WRITER_PROMPT_TEMPLATE = """
 Você é um excelente professor e redator técnico.
 
 **SUA TAREFA:**
-Criar um texto curto e simples que explique o método do prompt no contexto abaixo, seguindo passos rigorosos.
+Criar um texto curto e simples que explique o método do prompt no contexto abaixo.
 
 **PASSOS DE EXECUÇÃO OBRIGATÓRIOS:**
-1.  **CRIE A EXPLICAÇÃO:** Escreva um texto claro e direto sobre o método, indo direto ao ponto. Mantenha a separação de parágrafos se houver várias ideias distintas.
-2.  **GENERALIZE FERRAMENTAS DE IA:** No texto, generalize menções a 'ChatGPT', 'OpenAI', etc., para "a sua ferramenta de IA de preferência". Generalize "chave de API do ChatGPT", etc., para "a sua chave de API da ferramenta de IA escolhida".
-3.  **CRIE LINKS HTML:** No texto final, transforme URLs (como 'www.make.com') e frases especiais em links HTML.
-    * O link deve abrir em nova aba (`target="_blank"`).
-    * A frase "sua chave de API da ferramenta de IA escolhida" deve virar um link para a pesquisa: `<a href="https://www.google.com/search?q=obter+chave+de+API+para+ferramentas+de+IA" target="_blank" class="text-blue-400 hover:underline">sua chave de API da ferramenta de IA escolhida</a>`.
+1.  **CRIE A EXPLICAÇÃO:** Vá direto ao ponto. Não escreva frases introdutórias genéricas. Escreva um texto claro e simples sobre o método, mantendo a separação de parágrafos.
+2.  **GENERALIZE FERRAMENTAS E PROMESSAS:** Generalize menções a 'ChatGPT', 'OpenAI', etc., para "a sua ferramenta de IA de preferência". Se o texto original menciona que uma empresa terceira oferece algo (ex: "a OpenAI oferece crédito"), generalize a frase para "alguns provedores de IA podem oferecer crédito". NUNCA atribua a promessa à nossa marca.
+3.  **CRIE LINKS HTML:** Transforme URLs e a frase "sua chave de API da ferramenta de IA escolhida" em links HTML clicáveis (`<a href="..." target="_blank">...</a>`).
 4.  **LIMPEZA:** Remova frases sobre "vídeo", "template abaixo" ou "clique aqui".
 5.  **SUBSTITUA A MARCA:** Troque "Black Magic" ou "AI Avalanche" por "Arsenal Dev AI".
-6.  **RETORNE O RESULTADO:** Apresente apenas o texto final, já com as tags <a>, sem introduções.
+6.  **RETORNE O RESULTADO:** Apresente apenas o texto final, já com as tags <a>.
 
 **CONTEXTO DA PÁGINA:**
 {page_context}
@@ -49,23 +47,24 @@ Criar um texto curto e simples que explique o método do prompt no contexto abai
 **AGORA, EXECUTE OS 6 PASSOS E RETORNE O TEXTO FINAL:**
 """
 
-# PROMPT PARA ADAPTAR TUTORIAIS (V8 - IA GERA LINKS)
+# PROMPT PARA ADAPTAR TUTORIAIS (V9 - COM REGRA DE NEGÓCIO)
 ENHANCE_METHOD_PROMPT = """
-Você é um Redator Técnico e Editor especialista em adaptar tutoriais.
+Você é um Redator Técnico e Editor especialista em adaptar tutoriais para a nossa plataforma.
 
 **SUA TAREFA:**
 Processar o texto do tutorial abaixo através de uma série de passos de adaptação.
 
 **EXECUTE OS SEGUINTES PASSOS DE ADAPTAÇÃO NA ORDEM INDICADA:**
-1.  **TRADUZA E PARAGRAFE:** Traduza para um Português do Brasil claro. Mantenha a estrutura de parágrafos do original para garantir a legibilidade.
+1.  **TRADUZA E PARAGRAFE:** Traduza para um Português do Brasil claro. Mantenha a estrutura de parágrafos do original. Se o texto começar com uma frase introdutória genérica que repete o título, remova-a.
 2.  **SUBSTITUA MARCAS:** Substitua "Black Magic" ou "AI Avalanche" por "Arsenal Dev AI".
-3.  **GENERALIZE FERRAMENTAS DE IA:** Generalize "ChatGPT" ou "OpenAI" para "a sua ferramenta de IA de preferência". Generalize "chave de API do ChatGPT" para "a sua chave de API da ferramenta de IA escolhida".
-4.  **CRIE LINKS HTML:** No texto final, transforme URLs (como 'www.make.com') e frases especiais em links HTML.
-    * Todos os links devem abrir em nova aba (`target="_blank"`).
-    * A frase "sua chave de API da ferramenta de IA escolhida" DEVE virar um link para a pesquisa: `<a href="https://www.google.com/search?q=obter+chave+de+API+para+ferramentas+de+IA" target="_blank" class="text-blue-400 hover:underline">sua chave de API da ferramenta de IA escolhida</a>`.
-5.  **REMOVA REFERÊNCIAS INÚTEIS:** Elimine completamente do texto frases que mencionem "vídeo", "template abaixo" ou "clique aqui".
+3.  **GENERALIZE FERRAMENTAS E PROMESSAS (REGRA CRÍTICA):**
+    * Generalize nomes como "ChatGPT" e "OpenAI" para "a sua ferramenta de IA de preferência".
+    * Generalize "chave de API do ChatGPT" para "a sua chave de API da ferramenta de IA escolhida".
+    * **IMPORTANTE:** Se o texto original fizer uma promessa sobre uma empresa terceira (ex: "a OpenAI oferece crédito gratuito"), reescreva a frase para ser genérica e não atribuir a promessa à nossa marca. Exemplo: "alguns provedores de IA podem oferecer crédito gratuito para uso inicial".
+4.  **CRIE LINKS HTML:** Transforme URLs e a frase "sua chave de API da ferramenta de IA escolhida" em links HTML clicáveis (`<a href="..." target="_blank" class="text-blue-400 hover:underline">...</a>`). O link para a chave de API deve ser para a pesquisa no Google que já definimos.
+5.  **REMOVA REFERÊNCIAS INÚTEIS:** Elimine frases sobre "vídeo", "template abaixo" ou "clique aqui".
 6.  **PRESERVE O RESTO:** Mantenha todos os outros passos práticos e URLs explícitas.
-7.  **RETORNE O RESULTADO:** Apresente apenas o texto final já formatado com as tags <a>, sem introduções.
+7.  **RETORNE O RESULTADO:** Apresente apenas o texto final já formatado com as tags <a>.
 
 **TEXTO ORIGINAL PARA ANÁLISE:**
 {existing_explanation}
