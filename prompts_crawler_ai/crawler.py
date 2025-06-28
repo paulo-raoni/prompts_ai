@@ -75,7 +75,7 @@ def parse_menu_structure(soup, base_url):
 def main():
     is_demo_mode = '--demo' in sys.argv
     if is_demo_mode:
-        CRAWL_LIMIT = 20
+        CRAWL_LIMIT = 5
         print("--- Iniciando Crawler com Playwright (MODO DEMO - Limite de 20 páginas) ---")
     else:
         CRAWL_LIMIT = 200
