@@ -16,7 +16,7 @@ LOGIN_URL_HINT = os.getenv('PRODUCT_LOGIN_KEYWORD', 'Black Magic')
 WEBSITE_USERNAME = os.getenv('WEBSITE_USERNAME')
 WEBSITE_PASSWORD = os.getenv('WEBSITE_PASSWORD')
 
-OUTPUT_DIR = 'Arsenal_Dev_AI_Raw'
+OUTPUT_DIR = 'output/Arsenal_Dev_AI_Raw'
 
 # --- FUNÇÃO DE PARSE DO MENU (VERSÃO FINAL E PRECISA v5) ---
 def parse_menu_structure(soup, base_url):
@@ -76,7 +76,7 @@ def main():
     is_demo_mode = '--demo' in sys.argv
     if is_demo_mode:
         CRAWL_LIMIT = 5
-        print("--- Iniciando Crawler com Playwright (MODO DEMO - Limite de 20 páginas) ---")
+        print(f"--- Iniciando Crawler com Playwright (MODO DEMO - Limite de {CRAWL_LIMIT} páginas) ---")
     else:
         CRAWL_LIMIT = 200
         print(f"--- Iniciando Crawler com Playwright (Modo Completo - Limite de {CRAWL_LIMIT} páginas) ---")

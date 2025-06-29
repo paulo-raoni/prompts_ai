@@ -9,9 +9,9 @@ from PIL import Image
 
 # --- CONFIGURAÇÕES ---
 load_dotenv()
-INPUT_DIR = 'Arsenal_Dev_AI_Raw' 
-OUTPUT_FILE = 'prompts_database_structured.json'
-PROMPT_TEMPLATE_FILE = 'structure_prompt_template.txt'
+INPUT_DIR = 'output/Arsenal_Dev_AI_Raw' 
+OUTPUT_FILE = 'output/prompts_database_structured.json'
+PROMPT_TEMPLATE_FILE = 'templates/structure_prompt_template.txt'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 CONCURRENCY_LIMIT = 5
 DEMO_PROCESSING_LIMIT = 5

@@ -10,13 +10,13 @@ import google.generativeai as genai
 
 # --- CONFIGURAÇÕES GERAIS ---
 load_dotenv()
-DATABASE_FILE = 'prompts_database_final.json'
-OUTPUT_DIR_FULL = 'HTML_Arsenal_Completo'
-INDEX_TEMPLATE_FILE = 'index_template.html'
-CONTENT_TEMPLATE_FILE = 'content_template.html'
-SECTION_TEMPLATE_FILE = 'category_template.html' 
+DATABASE_FILE = 'output/prompts_database_final.json'
+OUTPUT_DIR_FULL = 'output/HTML_Arsenal_Completo'
+INDEX_TEMPLATE_FILE = 'templates/index_template.html'
+CONTENT_TEMPLATE_FILE = 'templates/content_template.html'
+SECTION_TEMPLATE_FILE = 'templates/category_template.html' 
+VIDEO_CONTENT_CACHE_FILE = 'output/video_content_cache.json'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-VIDEO_CONTENT_CACHE_FILE = 'video_content_cache.json'
 CONCURRENCY_LIMIT = 5
 
 # --- CONFIGURAÇÕES DE IA E PRODUTO ---

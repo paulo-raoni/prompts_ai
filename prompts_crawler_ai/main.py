@@ -4,10 +4,10 @@ import time
 
 # --- CONFIGURAÇÃO DO PIPELINE ---
 PIPELINE_SCRIPTS = [
-    'crawler.py',
-    'structure_data_with_vision.py',
-    'translate_database.py',
-    'product_factory.py'
+    'src/crawling/crawler.py',
+    'src/processing/structure_data_with_vision.py',
+    'src/processing/translate_database.py',
+    'src/generation/product_factory.py'
 ]
 
 def run_script(script_name, is_demo_mode):

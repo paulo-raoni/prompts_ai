@@ -6,15 +6,15 @@ import google.generativeai as genai
 
 # --- CONFIGURAÇÕES ---
 load_dotenv()
-INPUT_FILE = 'prompts_database_structured.json' 
-OUTPUT_FILE = 'prompts_database_final.json' 
+INPUT_FILE = 'output/prompts_database_structured.json' 
+OUTPUT_FILE = 'output/prompts_database_final.json' 
+CACHE_FILE = 'output/translation_cache_structured.json'
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
 PRODUCT_NAME = "Arsenal Dev AI"
 OLD_BRAND_NAME = "Black Magic"
 NEW_BRAND_NAME = "Brazilian Dev" 
 OLD_SITE_NAME = "aiavalanche"
 
-CACHE_FILE = 'translation_cache_structured.json'
 CONCURRENCY_LIMIT = 5
 gemini_model = None
 
