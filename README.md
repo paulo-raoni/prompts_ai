@@ -1,40 +1,132 @@
-# Projeto Brazilian Dev AI - Pipeline de Extração de Dados
+# Arsenal de Prompts AI
 
-## 1. Descrição do Projeto
+Um sistema completo para extrair, gerenciar e apresentar uma coleção de prompts de IA, com um painel de administração web para controle total do conteúdo.
 
-Este projeto contém um conjunto de scripts em Python projetados para executar um pipeline completo de extração, consolidação e tradução de prompts de IA. O objetivo final é gerar uma base de dados estruturada em JSON, que servirá como o "cérebro" para o agente de IA "Brazilian Dev AI".
+-----
 
-O processo é dividido em três etapas principais:
-1.  **Crawling:** Navega em um site alvo para extrair dados brutos de prompts.
-2.  **Consolidação:** Unifica os dados brutos em um único arquivo JSON.
-3.  **Tradução:** Utiliza a API do Google Gemini para traduzir os prompts para o português.
+### 📖 Tabela de Conteúdos
 
-## 2. Estrutura de Arquivos
+1.  [Funcionalidades Principais](https://www.google.com/search?q=%23-funcionalidades-principais)
+2.  [Tecnologias Utilizadas](https://www.google.com/search?q=%23%EF%B8%8F-tecnologias-utilizadas)
+3.  [Estrutura do Projeto](https://www.google.com/search?q=%23-estrutura-do-projeto)
+4.  [Guia de Utilização](https://www.google.com/search?q=%23-guia-de-utiliza%C3%A7%C3%A3o)
+      - [Pré-requisitos](https://www.google.com/search?q=%23pr%C3%A9-requisitos)
+      - [Instalação](https://www.google.com/search?q=%23instala%C3%A7%C3%A3o)
+      - [Como Executar](https://www.google.com/search?q=%23como-executar)
 
-A pasta do projeto está organizada da seguinte forma:
+-----
 
--   `BlackMagic_Prompts/`: Diretório onde o `crawler.py` salva os dados brutos extraídos, organizados por categoria e título.
--   `.env`: Arquivo de configuração para armazenar chaves de API secretas (Google Gemini) e credenciais de login do site. **Este arquivo não deve ser compartilhado.**
--   `crawler.py`: Script principal (Crawler v6.3) que utiliza Selenium para navegar no site, fazer login e extrair o conteúdo dos prompts, salvando-os na pasta `BlackMagic_Prompts`.
--   `consolidate_data.py`: Script que lê os arquivos `.txt` da pasta `BlackMagic_Prompts` e os unifica em um único arquivo JSON (`prompts_database.json`).
--   `translate_database.py`: Script final (v2) que lê o JSON consolidado, identifica prompts que precisam de tradução e utiliza a API do Gemini para preencher os dados em português, gerando o arquivo final.
--   `instructions.md`: Este arquivo de instruções.
--   `prompts_database.json`: Arquivo JSON intermediário gerado pelo `consolidate_data.py`.
--   `prompts_database_translated.json`: **O artefato final.** Este é o arquivo JSON completo e traduzido, pronto para ser usado pelo agente de IA.
+## ✨ Funcionalidades Principais
 
-## 3. Pré-requisitos
+  - **🤖 Extração de Dados**: Scripts para fazer *web scraping* e coletar prompts de websites externos.
+  - **✍️ Gerenciamento de Conteúdo (CRUD)**: Um painel de administração web completo para Criar, Ler, Atualizar e Excluir prompts.
+  - **⚡ Regeneração com Um Clique**: Botão no painel de administração para gerar o site estático final com todas as alterações recentes.
+  - **🖥️ Pré-visualização Integrada**: Acesse e navegue no site gerado diretamente a partir do ambiente do painel de administração.
+  - **💾 Base de Dados JSON**: Utiliza um arquivo `.json` como banco de dados, facilitando a portabilidade e a edição manual, se necessário.
 
-Antes de executar, certifique-se de que você tem o seguinte instalado:
--   Python 3.8 ou superior
--   Pip (gerenciador de pacotes do Python)
--   Google Chrome (ou o navegador para o qual você tem o WebDriver)
--   ChromeDriver correspondente à sua versão do Chrome (colocado na mesma pasta do projeto)
+-----
 
-## 4. Instalação e Configuração
+## 🛠️ Tecnologias Utilizadas
 
-Siga estes passos **uma única vez** para preparar o ambiente.
+  - **Backend**: Python, Flask
+  - **Frontend**: HTML5, Tailwind CSS
+  - **Formato de Dados**: JSON
 
-**1. Instale as dependências:**
-Abra um terminal nesta pasta e execute o seguinte comando para instalar todas as bibliotecas Python necessárias:
+-----
+
+## 📂 Estrutura do Projeto
+
+A estrutura de arquivos foi pensada para ser modular e organizada, separando as responsabilidades de cada parte do sistema.
+
+```sh
+/
+|-- admin_panel/            # Aplicação Flask para o painel de administração.
+|   |-- admin.py            # Lógica do servidor e das rotas do painel.
+|   +-- templates/          # Arquivos HTML do painel.
+|
+|-- src/                    # Código-fonte principal da aplicação.
+|   |-- crawling/           # Módulos de web scraping.
+|   |-- generation/         # Módulo gerador do site estático.
+|   |   +-- product_factory.py
+|   +-- processing/         # Módulos para processar e limpar dados.
+|
+|-- output/                 # Arquivos gerados pela aplicação.
+|   |-- HTML_Arsenal_Completo/ # O site HTML estático final.
+|   +-- prompts_database_final.json  # O banco de dados.
+|
++-- main.py                 # Ponto de entrada para o fluxo de extração.
++-- requirements.txt        # Lista de dependências Python.
++-- README.md               # Este arquivo.
+```
+
+-----
+
+## 🚀 Guia de Utilização
+
+Siga estes passos para configurar e rodar o projeto localmente.
+
+### Pré-requisitos
+
+  - Python (versão 3.10 ou superior)
+  - `pip` (gerenciador de pacotes do Python)
+
+### Instalação
+
+1.  **Clone o repositório:**
+
+    ```bash
+    git clone <URL_DO_SEU_REPOSITORIO>
+    cd <NOME_DO_DIRETORIO>
+    ```
+
+2.  **Crie e ative um ambiente virtual** (altamente recomendado):
+
+    ```bash
+    # Criar o ambiente
+    python -m venv venv
+
+    # Ativar no Windows
+    .\venv\Scripts\activate
+
+    # Ativar no macOS/Linux
+    source venv/bin/activate
+    ```
+
+3.  **Instale as dependências:**
+
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+### Como Executar
+
+O projeto tem dois fluxos de trabalho principais:
+
+#### 1\. Extração Inicial de Dados
+
+Este passo só é necessário para popular o banco de dados pela primeira vez a partir da fonte.
+
 ```bash
-pip install requests beautifulsoup4 lxml python-dotenv google-generativeai selenium undetected-chromedriver fpdf2 WeasyPrint
+python main.py
+```
+
+Este comando irá executar os scripts de extração e processamento, criando o arquivo `output/prompts_database_final.json`.
+
+#### 2\. Gerenciamento e Visualização (Painel de Administração)
+
+Este é o fluxo principal para o dia a dia: gerenciar conteúdo e regenerar o site.
+
+1.  **Inicie o servidor do painel de administração:**
+
+    ```bash
+    python admin_panel/admin.py
+    ```
+
+2.  **Acesse o painel no seu navegador:**
+    [link suspeito removido]
+
+3.  **Fluxo de trabalho no painel:**
+
+      - Faça suas alterações (adicione, edite ou exclua prompts).
+      - Clique em **`Regenerar Site`** para aplicar as alterações ao site estático.
+      - Clique em **`Ver Site`** para abrir a versão atualizada em uma nova aba.
