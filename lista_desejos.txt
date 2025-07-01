@@ -1,0 +1,30 @@
+# Lista de Desejos - Prompt Mestre AI
+
+- [ ] **Implementar Página de FAQ sobre Inteligência Artificial**
+    - **Objetivo:** Adicionar uma seção educativa ao site para ajudar usuários a entenderem conceitos fundamentais de IA.
+    - **Critérios de Aceitação:**
+        1. Adicionar um menu de navegação (`navbar`) fixo no topo da página inicial.
+        2. O `navbar` deve conter um link visível com o texto "FAQ sobre IA".
+        3. Este link deve levar a uma nova página (`faq.html`).
+        4. A página de FAQ deve apresentar respostas claras para as seguintes perguntas:
+            - O que é um LLM?
+            - O que é um agente de IA?
+            - O que é um Prompt Mestre?
+            - Como posso melhorar meus prompts mestres?
+
+- [ ] **Criar o "Estúdio de Prompts": um Assistente Inteligente para a Geração de Prompts Mestres**
+    - **Objetivo:** Desenvolver um ambiente de criação interativo onde a Gema atue como uma parceira proativa, ajudando os usuários a construir Prompts Mestres de alta qualidade através de múltiplos modos de assistência.
+
+    - **Critérios de Aceitação:**
+        1. Criar uma nova página ou seção dedicada ao "Estúdio de Prompts".
+        2. A interface deve ser dividida em uma área de "Construção" e uma área de "Pré-visualização do Resultado", que é atualizada em tempo real.
+        3. **Implementar o Modo de Assistência Visual (Drag and Drop Inteligente):**
+            - A Gema deve sugerir e disponibilizar uma biblioteca de "blocos de lógica" (ex: [Definir Persona], [Adicionar Contexto], [Especificar Formato de Saída]).
+            - O usuário pode arrastar e soltar estes blocos para montar a estrutura do seu prompt.
+            - A Gema pode sugerir blocos adicionais contextualmente, com base nos que já foram escolhidos.
+        4. **Implementar o Modo de Assistência Textual (Input Inteligente):**
+            - **Modo Literal:** O usuário pode digitar livremente, e o texto é inserido diretamente no prompt. Uma função de "desfazer" deve estar disponível.
+            - **Modo Assistido:** O usuário pode ativar um "assistente de escrita". Ao fazer isso, a Gema analisa o trecho digitado e sugere melhorias de clareza, estrutura ou eficácia, que o usuário pode aceitar ou rejeitar.
+        5. **Implementar o Modo de Geração Direta (Sugestão Proativa):**
+            - O usuário pode descrever seu objetivo em linguagem natural (ex: "preciso de um prompt para criar roteiros de vídeo para o YouTube").
+            - Com base nesse objetivo, a Gema deve gerar e apresentar uma primeira versão completa de um Prompt Mestre, que então se torna o ponto de partida para a edição usando os modos visual ou textual.
