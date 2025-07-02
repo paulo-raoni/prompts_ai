@@ -12,6 +12,20 @@
             - O que é um Prompt Mestre?
             - Como posso melhorar meus prompts mestres?
 
+- [ ] Criar Vídeos Tutoriais para cada Prompt Mestre
+    - **Objetivo:** Aumentar a usabilidade, o engajamento e o valor percebido do produto, criando um vídeo curto (60-90 segundos) para cada Prompt Mestre que demonstre um caso de uso prático.
+    - **Critérios de Aceitação:**
+        1. A página de cada Prompt Mestre no site final deve ter um player de vídeo embutido de forma destacada.
+        2. O vídeo deve mostrar uma captura de tela da interação, desde a ativação do prompt até o resultado final gerado pela IA.
+        3. Os vídeos devem ter uma narração clara e objetiva e legendas para acessibilidade.
+
+- [ ] [Prioridade 1] Implementar Sistema de Níveis para Prompts Mestres
+    - Objetivo: Classificar os "Prompts Mestres" por um sistema de níveis (ex: Básico, Intermediário, Avançado, Especialista) para guiar o usuário, facilitar a escolha e aumentar o valor percebido do produto.
+    - Critérios de Aceitação:
+        1. Um novo campo (ex: "nivel": "Avançado") deve ser adicionado à estrutura de dados de cada Prompt Mestre no arquivo prompts_database_final.json.
+        2. A interface do site (templates HTML) deve ser atualizada para exibir visualmente o nível de cada Prompt Mestre, utilizando tags, selos ou ícones distintos.
+        3. A funcionalidade de busca do site deve ser aprimorada para permitir que os usuários possam filtrar os prompts com base no seu nível de poder/complexidade.
+
 - [ ] **Criar o "Estúdio de Prompts": um Assistente Inteligente para a Geração de Prompts Mestres**
     - **Objetivo:** Desenvolver um ambiente de criação interativo onde a Gema atue como uma parceira proativa, ajudando os usuários a construir Prompts Mestres de alta qualidade através de múltiplos modos de assistência.
 
