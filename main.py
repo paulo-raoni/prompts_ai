@@ -38,14 +38,14 @@ def run_script(script_name, is_demo_mode):
 def main():
     """
     Orquestra a execução de todo o pipeline.
-    Execute com 'python main.py --demo' para um teste rápido com 20 páginas.
+    Execute com 'python main.py --demo' para um teste rápido com 5 páginas.
     Execute com 'python main.py' para o processo completo.
     """
     # Verifica se o modo demo foi ativado através dos argumentos da linha de comando
     is_demo_mode = '--demo' in sys.argv
 
     if is_demo_mode:
-        print(">>> INICIANDO O PIPELINE EM MODO DEMO (LIMITE DE 20 PÁGINAS) <<<")
+        print(">>> INICIANDO O PIPELINE EM MODO DEMO (LIMITE DE 5 PÁGINAS) <<<")
     else:
         print(">>> INICIANDO O PIPELINE COMPLETO <<<")
     
