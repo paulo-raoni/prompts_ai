@@ -110,6 +110,8 @@ Este passo só é necessário para popular o banco de dados pela primeira vez a 
 python main.py
 ```
 
+Para um teste rápido, execute `python main.py --demo` e o crawler irá coletar apenas 5 páginas.
+
 Este comando irá executar os scripts de extração e processamento, criando o arquivo `output/prompts_database_final.json`.
 
 #### 2\. Gerenciamento e Visualização (Painel de Administração)
